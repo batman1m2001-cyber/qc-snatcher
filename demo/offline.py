@@ -12,7 +12,8 @@ patched or edited:
   entries; the fan-in, ranking and merge between them run for real.
 
 No client for Databricks, Triton or Postgres is ever built, so the demo
-cannot dial out.
+cannot dial out. `--real` (see `demo/__main__.py`) keeps the real models,
+and with `seminar/env.sh` sourced the real retrieval backends as well.
 """
 from __future__ import annotations
 
@@ -25,25 +26,39 @@ from typing import Any, Iterator
 CURRENT_CALL: contextvars.ContextVar[str] = contextvars.ContextVar("demo_call", default="")
 
 
-def pin_environment() -> None:
+def pin_environment(real: bool = False) -> None:
     """Placeholders for what `resources.yaml` interpolates, all cases on.
 
     Must run before `src` is imported (its bootstrap reads the environment).
-    Values already set by the shell win, except the endpoints: the demo
-    never points at a real one.
+    Offline (the default) always pins the endpoints to `.invalid` hosts: the
+    demo never points at a real one. With `real` (`--real`) a value the shell
+    already set wins — `source seminar/env.sh` puts the local Triton and
+    pgvector in PG_DSN / TRITON_EMBEDDING_URL — and only the gaps are filled.
     """
     for case in ("hangup", "raba", "disclosure", "card_number", "phone_source",
                  "sentiment_agent", "sentiment_customer"):
         os.environ.setdefault(f"QC_ENABLE_{case.upper()}", "true")
     os.environ.setdefault("INCLUDE_TRACES", "off")
-    os.environ.update({
+    placeholders = {
         "DATABRICKS_HOST": "https://databricks.offline.invalid",
         "DATABRICKS_CLIENT_ID": "offline",
         "DATABRICKS_CLIENT_SECRET": "offline",
         "E4B_LOCAL_BASE_URL": "http://e4b.offline.invalid/v1",
         "PG_DSN": "postgresql://offline.invalid/none",
         "TRITON_EMBEDDING_URL": "triton.offline.invalid:443",
-    })
+    }
+    if real:
+        for key, value in placeholders.items():
+            os.environ.setdefault(key, value)
+    else:
+        os.environ.update(placeholders)
+
+
+def real_retrieval() -> bool:
+    """The seminar retrieval stack is configured (`source seminar/env.sh`):
+    both endpoints set, and to something other than the offline placeholders."""
+    dsn, triton = os.environ.get("PG_DSN", ""), os.environ.get("TRITON_EMBEDDING_URL", "")
+    return bool(dsn and triton) and ".invalid" not in dsn + triton
 
 
 def walk(graph: Any, prefix: str = "") -> Iterator[tuple[str, Any]]:
@@ -112,11 +127,16 @@ def _corpus_ops(pool: dict) -> dict:
             "doc-fetch": lambda name: fetch}
 
 
-def go_offline(graph: Any, script: dict, default: dict, pool: dict, models: bool = True) -> dict:
+def go_offline(graph: Any, script: dict, default: dict, pool: dict, models: bool = True,
+               retrieval: bool = True) -> dict:
     """Swap models and retrieval backends on *graph* in place. Returns counts.
 
     `models=False` (the demo's `--real`) leaves every LLMOp on the resource
-    `models.yaml` names for its stage; only retrieval answers from memory."""
+    `models.yaml` names for its stage. `retrieval=False` leaves the embedder,
+    vector searches and doc fetch on `resources.yaml` too (the local seminar
+    Triton + pgvector); only allowed together with `models=False`."""
+    if models and not retrieval:
+        raise ValueError("demo: real retrieval only comes with real models (--real)")
     counts = {"llm": 0, "retrieval": 0}
     corpus = _corpus_ops(pool)
     for name, op in walk(graph):
@@ -124,7 +144,7 @@ def go_offline(graph: Any, script: dict, default: dict, pool: dict, models: bool
         if kind == "llm" and models:
             op._llms, op._fallback_llms, op._initialized = [ScriptedLLM(name, script, default)], [], True
             counts["llm"] += 1
-        elif kind in corpus:
+        elif kind in corpus and retrieval:
             op._set_core(corpus[kind](name))
             op._initialized = True  # never build the Triton / Postgres client
             counts["retrieval"] += 1

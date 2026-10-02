@@ -4,6 +4,9 @@
     uv run python -m demo --graph    # just print the root graph's shape
     uv run python -m demo -v         # also show operonx's log of the failure
     uv run python -m demo --real     # real models per models.yaml (needs the seminar runner on :8000)
+    source seminar/env.sh && uv run python -m demo --real
+                                     # ... and real retrieval: Triton BGE-M3 + pgvector
+                                     # from seminar/docker-compose.yml
 
 The graph is `src.qc.graph:score_cases` exactly as production builds it —
 seven `verify_<case>` subgraphs in parallel, joined by `_finalize`. Only
@@ -18,9 +21,12 @@ import logging
 import sys
 from pathlib import Path
 
-from .offline import CURRENT_CALL, go_offline, pin_environment, walk
+from .offline import CURRENT_CALL, go_offline, pin_environment, real_retrieval, walk
 
-pin_environment()  # before `src` is imported
+REAL = "--real" in sys.argv   # models.yaml's resources, through the seminar runner's router
+pin_environment(real=REAL)  # before `src` is imported
+#: `--real` with seminar/env.sh sourced: the local Triton + pgvector too.
+REAL_RETRIEVAL = REAL and real_retrieval()
 
 from operonx.core import PARENT, Operon  # noqa: E402
 from operonx.telemetry.consumers.local import LocalConsumer  # noqa: E402
@@ -32,7 +38,6 @@ from src.qc.graph import score_cases  # noqa: E402
 from .calls import CALLS, CORPUS_POOL, DEFAULT, SCRIPT  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-REAL = "--real" in sys.argv   # models.yaml's resources, through the seminar runner's router
 RUNS = ROOT / "traces"   # where operonx.toml points Studio ([studio] traces)
 
 
@@ -100,11 +105,14 @@ async def main() -> int:
         for name in [n for n in logging.root.manager.loggerDict if n.startswith("operonx")]:
             logging.getLogger(name).setLevel(logging.CRITICAL)
     graph = build()
-    counts = go_offline(graph, SCRIPT, DEFAULT, CORPUS_POOL, models=not REAL)
+    counts = go_offline(graph, SCRIPT, DEFAULT, CORPUS_POOL, models=not REAL,
+                        retrieval=not REAL_RETRIEVAL)
     engine = Operon(graph, trace=LocalConsumer(config={"root": str(RUNS)}))
     if REAL:
+        where = ("Triton BGE-M3 + pgvector (seminar/docker-compose.yml)" if REAL_RETRIEVAL
+                 else f"{counts['retrieval']} backends answered in memory (source seminar/env.sh for real ones)")
         print("qc_flow on real models (models.yaml): l1-l3 and the other cases on the in-house model, "
-              f"l4 on gpt-4o; {counts['retrieval']} retrieval backends answered in memory")
+              f"l4 on gpt-4o; retrieval: {where}")
     else:
         print(f"qc_flow offline: {counts['llm']} LLM ops answered by script, "
               f"{counts['retrieval']} retrieval backends (Triton/pgvector) answered in memory")

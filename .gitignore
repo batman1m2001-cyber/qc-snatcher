@@ -55,6 +55,9 @@ wheels/torch-*.whl
 # pytest
 .pytest_cache/
 **models
+# ...except the seminar's Triton model repository: config + python code, no weights
+!seminar/triton/models/
+!seminar/triton/models/**
 models_onnx/
 
 # hush whl

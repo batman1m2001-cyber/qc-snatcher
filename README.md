@@ -36,7 +36,7 @@ Models per stage: `models.yaml`. Endpoints: `resources.yaml`.
 - A failed call writes **`{"error": "..."}`**; the merge must skip it.
 - `Result` includes **`Thái độ warning`** (score 0), a fourth agent value.
 
-## Seminar demo (offline, no data)
+## Seminar demo
 
 ```bash
 uv sync
@@ -57,6 +57,39 @@ entries. No network, `.env` or production file is touched.
 error rather than as "Không vi phạm": a failure is never a verdict. Each
 call is traced to `traces/adhoc/qc_flow/<date>/DEMO-00N/` (where Studio looks)
 (`view.txt`, `nodes.jsonl`).
+
+### `--real`: real models and real retrieval
+
+```bash
+# 1. The retrieval stack (compose project `qc-seminar`, all on 127.0.0.1):
+#    pgvector pg17 on :5435, NVIDIA Triton 25.08 (CPU) serving BGE-M3 dense
+#    (`bge_m3_embed`, 1024-d, L2-normalised) on HTTP :8010 / gRPC :8011.
+docker compose -f seminar/docker-compose.yml up -d --build
+#    first time: image build ~3.5 min, first start ~75 s (2.3 GB of weights
+#    into the `qc-hf-cache` volume); afterwards `up -d` alone, ready in ~25 s:
+until curl -sf localhost:8010/v2/models/bge_m3_embed/ready; do sleep 2; done
+
+# 2. Point the pipeline at it (PG_DSN, TRITON_EMBEDDING_URL, TRITON_EMBEDDING_SSL)
+source seminar/env.sh
+
+# 3. Once per fresh volume: tables, then corpus.yaml embedded into pgvector
+#    (1,727 variants, ~2.5 min on CPU). Kept in the `qc-db-data` volume.
+uv run operonx-run create_schema
+uv run operonx-run ingest --set seed=true
+uv run operonx-run ingest                 # check only: ok, or exit 1 when stale
+
+# 4. Real LLMs (models.yaml, through the seminar router on :8000) + real
+#    Triton + real pgvector; traces in traces/ show emb / hits / docs ops
+SEMINAR_PASSWORD=... uv run python -m demo --real
+
+# 5. Stop it; volumes (weights, corpus) are kept for the next `up -d`
+docker compose -f seminar/docker-compose.yml down
+```
+
+Without `source seminar/env.sh`, `--real` still uses the real models but
+answers retrieval from memory; plain `python -m demo` is always fully offline.
+Both containers have `restart: "no"` and CPU/memory limits (embedder 6 CPUs /
+8 GB, database 2 CPUs / 2 GB), so they never outlive a seminar session.
 
 ## Development
 

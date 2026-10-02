@@ -1,0 +1,43 @@
+# BGE-M3 dense embeddings, served the way resources.yaml `embedding:corpus-triton`
+# calls it (operonx TritonEmbedding with input_name=TEXT): one UTF-8 string per
+# row, shape (n, 1) BYTES in; one pooled 1024-d vector per row out.
+# CPU only — the seminar machine has no GPU.
+name: "bge_m3_embed"
+backend: "python"
+max_batch_size: 32
+
+input [
+  {
+    name: "TEXT"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+
+output [
+  {
+    name: "sentence_embedding"
+    data_type: TYPE_FP32
+    dims: [ 1024 ]
+  }
+]
+
+dynamic_batching {
+  max_queue_delay_microseconds: 2000
+}
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_CPU
+  }
+]
+
+parameters: {
+  key: "hf_model"
+  value: { string_value: "BAAI/bge-m3" }
+}
+parameters: {
+  key: "max_length"
+  value: { string_value: "1024" }
+}
