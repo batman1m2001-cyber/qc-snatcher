@@ -185,6 +185,30 @@ llm:e4b-local:
   retry_min_delay: 1.0
   retry_max_delay: 10.0
 
+# Seminar ("Workflow Is All You Need"): both go through the seminar runner's model
+# router (ai-workflow-seminar, /llm/v1), which holds the real keys. A plain model
+# name reaches the in-house model (Edupia gateway, gemma-4-E2B-it); `openai:<name>`
+# reaches OpenAI. api_key is the seminar password the router checks.
+llm:seminar-inhouse:
+  api_type: openai
+  api_key: ${SEMINAR_PASSWORD:seminar-local}
+  base_url: ${SEMINAR_LLM_URL:http://127.0.0.1:8000/llm/v1}
+  model: inhouse
+  max_retries: 3
+  retry_base_delay: 2.0
+  retry_min_delay: 1.0
+  retry_max_delay: 10.0
+
+llm:seminar-gpt-4o:
+  api_type: openai
+  api_key: ${SEMINAR_PASSWORD:seminar-local}
+  base_url: ${SEMINAR_LLM_URL:http://127.0.0.1:8000/llm/v1}
+  model: openai:gpt-4o
+  max_retries: 3
+  retry_base_delay: 2.0
+  retry_min_delay: 1.0
+  retry_max_delay: 10.0
+
 # =============================================================================
 # Corpus Retrieval — vector stores + doc store
 # =============================================================================

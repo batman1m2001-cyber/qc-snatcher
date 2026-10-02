@@ -3,6 +3,7 @@
     uv run python -m demo            # QC table per call + a trace per call
     uv run python -m demo --graph    # just print the root graph's shape
     uv run python -m demo -v         # also show operonx's log of the failure
+    uv run python -m demo --real     # real models per models.yaml (needs the seminar runner on :8000)
 
 The graph is `src.qc.graph:score_cases` exactly as production builds it —
 seven `verify_<case>` subgraphs in parallel, joined by `_finalize`. Only
@@ -31,6 +32,7 @@ from src.qc.graph import score_cases  # noqa: E402
 from .calls import CALLS, CORPUS_POOL, DEFAULT, SCRIPT  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
+REAL = "--real" in sys.argv   # models.yaml's resources, through the seminar runner's router
 RUNS = ROOT / "traces"   # where operonx.toml points Studio ([studio] traces)
 
 
@@ -98,10 +100,14 @@ async def main() -> int:
         for name in [n for n in logging.root.manager.loggerDict if n.startswith("operonx")]:
             logging.getLogger(name).setLevel(logging.CRITICAL)
     graph = build()
-    counts = go_offline(graph, SCRIPT, DEFAULT, CORPUS_POOL)
+    counts = go_offline(graph, SCRIPT, DEFAULT, CORPUS_POOL, models=not REAL)
     engine = Operon(graph, trace=LocalConsumer(config={"root": str(RUNS)}))
-    print(f"qc_flow offline: {counts['llm']} LLM ops answered by script, "
-          f"{counts['retrieval']} retrieval backends (Triton/pgvector) answered in memory")
+    if REAL:
+        print("qc_flow on real models (models.yaml): l1-l3 and the other cases on the in-house model, "
+              f"l4 on gpt-4o; {counts['retrieval']} retrieval backends answered in memory")
+    else:
+        print(f"qc_flow offline: {counts['llm']} LLM ops answered by script, "
+              f"{counts['retrieval']} retrieval backends (Triton/pgvector) answered in memory")
     failed = 0
     for call in CALLS:
         res = await score(engine, call)

@@ -112,13 +112,16 @@ def _corpus_ops(pool: dict) -> dict:
             "doc-fetch": lambda name: fetch}
 
 
-def go_offline(graph: Any, script: dict, default: dict, pool: dict) -> dict:
-    """Swap models and retrieval backends on *graph* in place. Returns counts."""
+def go_offline(graph: Any, script: dict, default: dict, pool: dict, models: bool = True) -> dict:
+    """Swap models and retrieval backends on *graph* in place. Returns counts.
+
+    `models=False` (the demo's `--real`) leaves every LLMOp on the resource
+    `models.yaml` names for its stage; only retrieval answers from memory."""
     counts = {"llm": 0, "retrieval": 0}
     corpus = _corpus_ops(pool)
     for name, op in walk(graph):
         kind = str(getattr(op, "type", ""))
-        if kind == "llm":
+        if kind == "llm" and models:
             op._llms, op._fallback_llms, op._initialized = [ScriptedLLM(name, script, default)], [], True
             counts["llm"] += 1
         elif kind in corpus:
