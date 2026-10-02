@@ -36,6 +36,28 @@ Models per stage: `models.yaml`. Endpoints: `resources.yaml`.
 - A failed call writes **`{"error": "..."}`**; the merge must skip it.
 - `Result` includes **`Thái độ warning`** (score 0), a fourth agent value.
 
+## Seminar demo (offline, no data)
+
+```bash
+uv sync
+uv run python -m demo            # 5 synthetic calls -> one QC table per call
+uv run python -m demo --graph    # the root graph's shape only
+uv run python -m demo -v         # plus operonx's log of the failing call
+```
+
+Runs the production root graph `src.qc.graph:score_cases` (seven
+`verify_<case>` subgraphs in parallel, then `_finalize`) on five invented
+calls in `demo/calls.py`. Real: every gate, prompt render, the XML/JSON
+parsers, the `parsed` guards, corpus ranking and `_finalize`. Canned
+(`demo/offline.py`): the text each model would return, and the
+Triton / pgvector / Postgres answers, which are three real `corpus.yaml`
+entries. No network, `.env` or production file is touched.
+
+`DEMO-005` gets a reply that does not parse, so the call is recorded as an
+error rather than as "Không vi phạm": a failure is never a verdict. Each
+call is traced to `.operonx/runs/adhoc/qc_flow/<date>/DEMO-00N/`
+(`view.txt`, `nodes.jsonl`).
+
 ## Development
 
 See [CLAUDE.md](CLAUDE.md). Tests: `uv run pytest tests/` (offline).

@@ -30,6 +30,7 @@ outputs/
 
 # Local traces
 traces/
+.operonx/
 
 # Pipeline log files
 logs/
