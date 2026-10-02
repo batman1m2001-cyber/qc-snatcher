@@ -8,7 +8,7 @@ The graph is `src.qc.graph:score_cases` exactly as production builds it —
 seven `verify_<case>` subgraphs in parallel, joined by `_finalize`. Only
 the model replies and the corpus retrieval are canned (`demo/offline.py`,
 `demo/calls.py`). Each run is traced with operonx's local consumer into
-`.operonx/runs/`, which OperonX Studio reads.
+`traces/`, where operonx.toml points OperonX Studio.
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ from src.qc.graph import score_cases  # noqa: E402
 from .calls import CALLS, CORPUS_POOL, DEFAULT, SCRIPT  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-RUNS = ROOT / ".operonx" / "runs"
+RUNS = ROOT / "traces"   # where operonx.toml points Studio ([studio] traces)
 
 
 def build():

@@ -55,7 +55,7 @@ entries. No network, `.env` or production file is touched.
 
 `DEMO-005` gets a reply that does not parse, so the call is recorded as an
 error rather than as "Không vi phạm": a failure is never a verdict. Each
-call is traced to `.operonx/runs/adhoc/qc_flow/<date>/DEMO-00N/`
+call is traced to `traces/adhoc/qc_flow/<date>/DEMO-00N/` (where Studio looks)
 (`view.txt`, `nodes.jsonl`).
 
 ## Development
