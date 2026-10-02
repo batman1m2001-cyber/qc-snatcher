@@ -1,0 +1,62 @@
+# Local retrieval stack for the seminar demo: the corpus store (Postgres +
+# pgvector) and the BGE-M3 embedder on NVIDIA Triton, CPU only.
+#
+#   docker compose -f seminar/docker-compose.yml up -d --build
+#   source seminar/env.sh
+#
+# Ports are off the defaults on purpose — 5433/5434 belong to other stacks.
+name: qc-seminar
+
+services:
+  qc-db:
+    image: pgvector/pgvector:pg17
+    container_name: qc-seminar-db
+    environment:
+      POSTGRES_USER: qc
+      POSTGRES_PASSWORD: qc-local    # local dummy credential, bound to 127.0.0.1
+      POSTGRES_DB: qc_corpus
+    ports:
+      - "127.0.0.1:5435:5432"
+    volumes:
+      - qc-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qc -d qc_corpus"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: "no"          # runs only while the seminar is up
+    cpus: "2"
+    mem_limit: 2g
+
+  qc-embed:
+    build:
+      context: ./triton
+    image: qc-seminar-triton:25.08-cpu
+    container_name: qc-seminar-embed
+    command: ["tritonserver", "--model-repository=/models", "--model-control-mode=explicit",
+              "--load-model=bge_m3_embed", "--log-verbose=0"]
+    environment:
+      HF_HOME: /hf-cache
+      EMBED_THREADS: "6"
+      OMP_NUM_THREADS: "6"
+    shm_size: "2gb"
+    ports:
+      - "127.0.0.1:8010:8000"   # HTTP  (health: /v2/models/bge_m3_embed/ready)
+      - "127.0.0.1:8011:8001"   # gRPC  (what operonx's Triton client dials)
+      - "127.0.0.1:8012:8002"   # metrics
+    volumes:
+      - ./triton/models:/models:ro
+      - qc-hf-cache:/hf-cache
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf localhost:8000/v2/models/bge_m3_embed/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
+    restart: "no"          # runs only while the seminar is up
+    cpus: "6"
+    mem_limit: 8g
+
+volumes:
+  qc-db-data:
+  qc-hf-cache:
