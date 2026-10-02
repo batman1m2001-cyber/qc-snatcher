@@ -1,0 +1,35 @@
+flowchart LR
+    subgraph LOAD["Load — runs before scoring"]
+        direction LR
+        YML["corpus.yaml<br/>QC-authored"] --> ING["Ingest<br/>parse · embed BGE-M3 · upsert"]
+    end
+
+    subgraph STORE["Postgres + pgvector"]
+        direction TB
+        KI["knowledge_info<br/>policy group"]
+        KP["knowledge_policy<br/>entry · <b>severity</b> · batch_id"]
+        PE["positive_embedding<br/>707 vectors · HNSW"]
+        CE["carveout_embedding<br/>904 vectors · HNSW"]
+        KI -->|1 : N| KP
+        KP -->|cascade on delete| PE
+        KP -->|cascade on delete| CE
+    end
+
+    subgraph READ["Read — once per candidate turn"]
+        direction TB
+        Q["Sentence under review"] --> EMB["BGE-M3 embedding<br/>Triton service"]
+        EMB --> ANN["ANN search over both indexes<br/>top-K each · ef_search 200"]
+        ANN --> POOLS["Two pools → filter decider<br/>and primary decider"]
+    end
+
+    ING --> KI
+    PE -.-> ANN
+    CE -.-> ANN
+
+    classDef kb  fill:#e2f0f0,stroke:#0a6a6e,stroke-width:2px,color:#08343a
+    classDef new fill:#e6f3ec,stroke:#1a6b47,stroke-width:1.5px,color:#0f3d29
+    classDef bad fill:#fbeceb,stroke:#a5322e,stroke-width:1.5px,color:#5a1c1a
+    classDef ext fill:#fbf2df,stroke:#8d5c07,stroke-width:1.5px,color:#4a3104
+    classDef gem fill:#eaf1fe,stroke:#4285F4,stroke-width:1.6px,color:#123a75
+    classDef cla fill:#fbeee8,stroke:#D97757,stroke-width:1.6px,color:#6b3320
+    class KP,PE,CE,ANN kb

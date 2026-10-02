@@ -1,0 +1,180 @@
+Phân tích vi phạm **"Tiết lộ nguồn truy dấu thông tin KH/BT3"**.
+
+Bối cảnh:
+- KH/BT3 có thể hỏi agent: "Sao biết số điện thoại của tôi?", "Lấy số tôi ở đâu?", "Ai cho số tôi?"
+- Nhiệm vụ: xác định agent có **tiết lộ nguồn cụ thể** nơi lấy được số điện thoại / thông tin của KH hay không.
+
+---
+
+🔴 **NGUYÊN TẮC CHÍNH** (áp dụng TRƯỚC mọi rule khác)
+
+Vi phạm CHỈ KHI: **một bên thứ ba CUNG CẤP/CHO/GỬI cho CB** số điện thoại hoặc thông tin của KH/BT3 qua Zalo/Facebook/mạng xã hội, và CB tiết lộ nguồn này ra trong cuộc gọi.
+
+Cách phân biệt: nhìn vào AI là CHỦ THỂ (subject) của hành động liên quan đến Zalo/Facebook:
+
+| Chủ thể | Hành động | Verdict |
+|---|---|---|
+| **CB tự thực hiện** | check / tra / tìm / xem / kiểm tra / gửi / nhắn / chia sẻ / nhờ chuyển lời | **KHÔNG vi phạm** |
+| **Bên thứ ba (anh A / chị B / bạn / người thân)** | cho / cung cấp / gửi cho CB / xin / chuyển cho CB | **VI PHẠM** |
+
+---
+
+✅ **KHÔNG VI PHẠM** (CB là chủ thể hành động)
+
+### Nhóm A — CB chủ động CHECK / TRA CỨU / TÌM KIẾM trên Zalo/Facebook
+Bất kỳ câu nào CB tự tra/check/tìm/xem để xác minh danh tính KH, KHÔNG vi phạm:
+- "Em kiểm tra số điện thoại của anh/chị trên Zalo/facebook thấy tên là..."
+- "Em tìm số điện thoại này trên Zalo/facebook"
+- "Em check SĐT lên Zalo/facebook thì hiện tên là..."
+- "tra số trên zalo/facebook đều là số của chị thủy mà chị"
+- "zalo/facebook của anh cũng là nguyễn công thanh đây anh"
+- "em thấy zalo/facebook tên là [tên]"
+- "Zalo số này tên là Lê Chí"
+- "Sao Zalo vẫn để tên là Văn Ngọc Thanh?"
+- "Em tra Facebook ra thì thấy [...]"
+- "Em không thấy số trên phây búc"
+- "Em xuất số đt trên phây búc thấy [...]"
+
+### Nhóm B — CB GỬI / NHẮN / CHIA SẺ thông tin qua Zalo/Facebook
+CB là người gửi đi (kênh truyền tin, KHÔNG phải nguồn lấy số):
+- "thông tin em đã để lại qua zalo/fb" (CB đã nhắn KH qua zalo/FB rồi)
+- "kiểm tra hồ sơ em gửi qua zalo/fb/gmail chưa"
+- "gửi thông tin qua zalo"
+- "Em vừa gửi STK qua Zalo cho anh rồi ạ"
+- "Anh dùng Zalo ngân hàng gửi cho anh hồ sơ vay vốn"
+- "nhắn tin trên zalo/facebook"
+- "Em có thể kết bạn Zalo với anh được không"
+- "Em vừa gửi lời mời kết bạn Zalo cho anh"
+
+### Nhóm C — CB NHỜ BT3 chuyển lời / forward qua Zalo/FB
+- "nhờ chị gửi lời nhắn cho anh chị A qua zalo/facebook"
+- "Mình nhắn được qua zalo phây búc nhắn em với"
+- "Anh nhắn giúp em qua Zalo"
+
+### Nhóm D — CB HỎI/KHAI THÁC thông tin liên lạc Zalo/FB của KH
+- "Anh có dùng Zalo không?"
+- "Có Facebook không ạ?"
+- "Anh có kết bạn Facebook Zalo gì không?"
+- "Có Facebook Zalo gì không bên em gọi số này không được"
+
+### Nhóm E — Các trường hợp KHÁC không liên quan Zalo/FB cũng KHÔNG vi phạm
+- CB **GIỚI THIỆU** bản thân: "Em gọi từ phía Win", "Em liên hệ từ ngân hàng"
+- CB **HỎI về mối quan hệ**: "Đây có phải người quen của anh X không?", "Anh có quen ai tên là Y không?"
+- CB giải thích **người tham chiếu / người thân / người liên hệ khẩn cấp trong hồ sơ**:
+  + "Số này được đăng ký làm người tham chiếu"
+  + "Anh A có để lại số này là số tham chiếu / người thân / người liên hệ"
+  + "Số này trong hồ sơ vay của khách hàng"
+  + "Đây là số đăng ký trong hợp đồng"
+- CB giải thích **lịch sử số điện thoại** (không liên quan Zalo/FB):
+  + "Số điện thoại của anh trước đây là số của công ty"
+- CB **từ chối / chung chung / không rõ**:
+  + "Em không rõ nguồn cụ thể ạ"
+  + "Đây là thông tin trong hệ thống"
+  + "Số được cung cấp khi đăng ký"
+
+### Nhóm F — CB tham chiếu LỊCH SỬ TRAO ĐỔI giữa CHÍNH CB và CHÍNH KH qua Zalo/FB (KHÔNG VI PHẠM)
+Đây là patterns nhắc đến cuộc đàm thoại CB–KH đã diễn ra trước đó qua Zalo/FB. KHÔNG phải nguồn truy dấu vì cả hai bên đều là CB và chính KH:
+- "em đã trao đổi với anh/chị qua zalo/fb rồi đấy ạ"
+- "em đã báo với anh/chị qua zalo rồi mà"
+- "hôm trước anh/chị cũng nhắn tin cho em qua zalo"
+- "anh/chị cũng đã nhắn cho em ở trên gia lô (zalo) đây"
+- "em đã gửi thông tin qua zalo cho anh chị rồi"
+- "cái này em đã trao đổi với anh/chị qua zalo trước đó"
+
+**Lưu ý**: Trong các pattern này, người liên lạc qua Zalo/FB **là CHÍNH KH đang nghe máy** (anh/chị/cô chị/bác cùng ngôi xưng hô với KH), không phải một BT3 thứ ba. Do đó KHÔNG có "bên thứ ba cung cấp số" → KHÔNG VI PHẠM.
+
+### Nhóm G — CB tra Facebook/Zalo và phát hiện thông tin liên quan (KHÔNG VI PHẠM)
+Mở rộng Nhóm A: bất kỳ câu nào CB chia sẻ kết quả tra cứu của CB trên Facebook/Zalo về danh tính / quan hệ:
+- "em thấy có để trên facebook là [tên] mà có chồng là anh [tên]"
+- "facebook của anh để là [tên] đấy ạ"
+- "trên zalo/facebook của anh chị thì tên là [...]"
+- "em check facebook thấy anh chị làm ở [...]"
+- "em thấy facebook anh chị đăng [...]"
+
+**Lưu ý**: CB là chủ thể tra cứu, mục đích để xác minh KH. Nguồn không phải từ một BT3 → KHÔNG VI PHẠM.
+
+---
+
+❌ **VI PHẠM** — chỉ khi CB tiết lộ rõ một bên thứ ba CUNG CẤP số/thông tin qua Zalo/Facebook
+
+Pattern bắt buộc: câu nói có 2 yếu tố:
+1. Có **người cung cấp cụ thể** (tên người, "anh/chị A", "bạn/người thân của anh/chị", "anh B đồng nghiệp", v.v.)
+2. Hành động **chuyển/cho/cung cấp số từ người đó TỚI CB** qua Zalo/Facebook
+
+Ví dụ vi phạm điển hình (theo QC):
+- "Số điện thoại này em **xin của anh/chị A** trên Zalo/facebook"
+- "Anh/chị A **gửi số này cho em** qua Zalo/facebook"
+- "Bạn/người thân của anh/chị **cung cấp số này cho em** trên Zalo/facebook"
+- "Em được anh X cho số của anh qua Zalo"
+- "Chị Hoa gửi cho em số của anh qua Zalo"
+- "Bên anh B đồng nghiệp anh nhắn cho em số này qua Facebook"
+
+Các nguồn khác cũng tính vi phạm khi CB nói RÕ ràng:
+- "Số của anh em lấy từ Facebook ạ" (trả lời thẳng "lấy ở đâu" — không kèm xác minh, không kèm tra cứu)
+- "Chị Lan ở phòng marketing cho số của anh" (tiết lộ người cụ thể cho số)
+- "Đây là số trong danh sách khuyến mãi" (tiết lộ nguồn external)
+
+---
+
+🟡 **Phân biệt dễ nhầm** (đặc biệt quan trọng — đây là điểm LLM hay sai)
+
+| Câu nói | Verdict | Lý do |
+|---|---|---|
+| "Em check Zalo số này thấy tên là chị Hoa" | ✅ KHÔNG | CB chủ động tra cứu để xác minh |
+| "Em xin số của anh từ chị Hoa trên Zalo" | ❌ VI PHẠM | Chị Hoa là bên cung cấp, CB lấy số từ chị Hoa |
+| "Anh có dùng Zalo không em nhắn thêm" | ✅ KHÔNG | CB hỏi khai thác kênh liên lạc |
+| "Chị bạn anh gửi em số của anh qua Zalo" | ❌ VI PHẠM | Bạn của KH là bên cung cấp |
+| "Em vừa nhắn tin Zalo cho anh rồi" | ✅ KHÔNG | CB gửi (kênh truyền tin) |
+| "Anh A nhắn em số này qua Zalo" | ❌ VI PHẠM | Anh A là bên cung cấp số |
+| "Em tra Zalo của anh thấy tên Văn Thanh" | ✅ KHÔNG | CB tra cứu xác minh danh tính |
+| "Em không thấy số anh trên Facebook" | ✅ KHÔNG | CB tìm nhưng không thấy — không phải nguồn |
+| "Bạn anh để lại số anh cho bên em qua Zalo" | ❌ VI PHẠM | Bạn KH là bên cung cấp |
+| "Em thấy có để trên facebook là hải đăng có chồng là anh đạt" | ✅ KHÔNG | CB tra Facebook để xác minh danh tính / quan hệ vợ chồng |
+| "Hôm trước cô chị cũng nhắn tin cho tôi qua gia lô đây" | ✅ KHÔNG | KH chính là người đã nhắn — KH↔CB comm history, không phải BT3 cung cấp |
+| "Em đã trao đổi với anh chị qua zalo rồi đấy ạ" | ✅ KHÔNG | CB nhắc đến lịch sử trao đổi của chính cuộc gọi này với chính KH |
+| "Em đã báo với chị qua zalo từ trước rồi" | ✅ KHÔNG | CB nhắn cho chính KH trước đó qua Zalo (kênh truyền tin) |
+
+---
+
+🎯 **Heuristic quyết định cuối — BẮT BUỘC chạy 3 test trước khi kết luận VI PHẠM**:
+
+**Test 1: Có BT3 cụ thể được nêu tên không?**
+Câu nói có chỉ rõ một người thứ ba (KHÔNG phải CB và KHÔNG phải chính KH đang nghe máy) — ví dụ tên người, "anh A đồng nghiệp", "chị Lan ở phòng marketing", "bạn anh", "người thân của anh chị" — đang đóng vai trò CUNG CẤP số/thông tin?
+- KHÔNG → KHÔNG VI PHẠM, dừng.
+- CÓ → đi tiếp Test 2.
+
+**Test 2: BT3 đó có là CHỦ THỂ của hành động chuyển/cho/cung cấp/gửi tới CB không?**
+Cấu trúc câu: **[BT3] (chủ ngữ) + [verb cho/cung cấp/gửi/nhắn] + [số/thông tin] + cho CB qua Zalo/Facebook**.
+- KHÔNG (CB là chủ thể tự tra/check/gửi/nhắn) → KHÔNG VI PHẠM, dừng.
+- CÓ → đi tiếp Test 3.
+
+**Test 3: Nguồn là KH chính (đang nghe máy) hay BT3 thật sự?**
+- Nếu người liên lạc/cung cấp qua Zalo/FB chính là KH đang nghe máy (ngôi xưng hô anh/chị/cô chị/bác trùng với KH) → KHÔNG VI PHẠM (chỉ là KH↔CB comm history).
+- Nếu là BT3 thật sự (không phải KH đang nghe máy) → VI PHẠM.
+
+**Mặc định**: Nếu câu chỉ nhắc "Zalo/Facebook" mà KHÔNG đồng thời thỏa cả 3 test → **KHÔNG VI PHẠM**.
+
+**Cấm**: KHÔNG kết luận VI PHẠM chỉ vì:
+- CB nhắc đến Facebook/Zalo (mention thuần túy).
+- CB nói "em thấy trên facebook/zalo là [tên]" (đây là CB tra cứu).
+- CB nhắc tới việc đã trao đổi/đã nhắn cho chính KH qua zalo (KH↔CB history).
+- KH đã từng nhắn cho CB qua Zalo (KH↔CB history).
+
+---
+
+Transcript được cho dưới dạng `[N] AGENT: ...` hoặc `[x] CUSTOMER: ...`, trong đó `N` là turn_idx của lượt AGENT (số nguyên, dùng để trích bằng chứng). Lượt CUSTOMER bị mask thành `[x]` — KHÔNG được trích idx của CUSTOMER.
+
+Trả về định dạng XML (không thêm bất cứ thông tin thừa nào):
+<result>
+<violation>true/false</violation>
+<reason>Lý do ngắn gọn tại sao vi phạm hoặc không vi phạm</reason>
+<evidence>
+  Danh sách turn_idx AGENT gây vi phạm, format: 3, 7, 12
+  (Chỉ điền số nguyên có xuất hiện trong `[N] AGENT:` ở transcript. KHÔNG bịa idx.)
+</evidence>
+</result>
+
+Lưu ý: Nếu không vi phạm, để trống tag <evidence>.
+
+Đây là nội dung cuộc gọi:
+{transcript}

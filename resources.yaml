@@ -1,0 +1,279 @@
+# operonx resource registry. `models.yaml` picks which entry serves each stage.
+# Format: category:name — category is inferred from key prefix
+
+# =============================================================================
+# OAuth2 Token Providers
+# =============================================================================
+
+# Databricks OAuth2 (for Claude on Databricks)
+oauth2:databricks:
+  token_url: ${DATABRICKS_HOST}/oidc/v1/token
+  client_id: ${DATABRICKS_CLIENT_ID}
+  client_secret: ${DATABRICKS_CLIENT_SECRET}
+  scope: all-apis
+  refresh_interval: 1800
+
+# =============================================================================
+# LLM Configurations
+# =============================================================================
+
+# Databricks Claude 4 Sonnet (via OAuth2 auth)
+llm:db-claude-4-sonnet:
+  api_type: db-anthropic
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: system.ai.claude-sonnet-4
+  cost_per_input_token: 0.000003
+  cost_per_output_token: 0.000015
+  max_retries: 10
+  retry_base_delay: 30.0   # seconds; doubles each attempt before jitter
+  retry_min_delay: 10.0    # floor — never retry sooner than this
+  retry_max_delay: 120.0   # cap at one full QPM window
+
+# Databricks Claude 4 Sonnet with extended thinking enabled.
+# Anthropic requires temperature=1.0 and forbids top_p when thinking is on.
+# Hush skips null values in _prepare_params, so setting them to null strips
+# them from the request. budget_tokens caps reasoning tokens; final content
+# tokens = max_tokens - budget_tokens (roughly).
+llm:db-claude-4-sonnet-thinking:
+  api_type: db-anthropic
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: system.ai.claude-sonnet-4
+  cost_per_input_token: 0.000003
+  cost_per_output_token: 0.000015
+  max_retries: 10
+  retry_base_delay: 30.0
+  retry_min_delay: 10.0
+  retry_max_delay: 120.0
+  generation_extras:
+    top_p: null
+    temperature: 1.0
+    thinking:
+      type: enabled
+      budget_tokens: 4096
+    max_tokens: 8192
+
+# Databricks Claude 4 Sonnet (via OAuth2 auth)
+llm:db-claude-4-6-sonnet:
+  api_type: db-anthropic
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: system.ai.claude-sonnet-4-6
+  cost_per_input_token: 0.000003
+  cost_per_output_token: 0.000015
+  max_retries: 10
+  retry_base_delay: 30.0   # seconds; doubles each attempt before jitter
+  retry_min_delay: 10.0    # floor — never retry sooner than this
+  retry_max_delay: 120.0   # cap at one full QPM window
+  # Claude 4.6 rejects requests setting both temperature + top_p. Strip
+  # top_p (hush base.py skips None values when building API params).
+  generation_extras:
+    top_p: null
+    thinking:
+      type: disabled
+
+# Databricks Gemini 2.5 Pro (via OAuth2 auth)
+# Cost: rough Google pricing for gemini-2.5-pro at <200K context.
+# Verify with Databricks billing console once you confirm endpoint is live.
+llm:db-gemini-2-5-pro:
+  api_type: db-gemini
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: databricks-gemini-2-5-pro
+  cost_per_input_token: 0.00000125
+  cost_per_output_token: 0.000005
+  max_retries: 10
+  retry_base_delay: 30.0
+  retry_min_delay: 10.0
+  retry_max_delay: 120.0
+
+# Gemini 2.5 Pro with maximum thinking. 2.5 Pro thinks by default; this
+# variant bumps reasoning_effort to `high` for deeper chain-of-thought
+# (used for optimizer critique tasks that need multi-step reasoning over
+# violation cases). Anthropic-style `thinking:` field does not apply here.
+llm:db-gemini-2-5-pro-thinking:
+  api_type: db-gemini
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: databricks-gemini-2-5-pro
+  cost_per_input_token: 0.00000125
+  cost_per_output_token: 0.000005
+  max_retries: 10
+  retry_base_delay: 30.0
+  retry_min_delay: 10.0
+  retry_max_delay: 120.0
+  generation_extras:
+    reasoning_effort: high
+
+# Databricks Gemini 3 Flash via AI Gateway (system.ai.* model catalog)
+# Thinking cannot be fully disabled per Google docs — `reasoning_effort: low`
+# minimises it (≈ thinking_level=minimal). Cost: placeholder using 2.5-flash
+# pricing as proxy until 3.0 list pricing is published.
+llm:db-gemini-3-flash:
+  api_type: db-gemini
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: system.ai.gemini-3-flash
+  cost_per_input_token: 0.000000075
+  cost_per_output_token: 0.0000003
+  max_retries: 10
+  retry_base_delay: 30.0
+  retry_min_delay: 10.0
+  retry_max_delay: 120.0
+  generation_extras:
+    reasoning_effort: minimal
+
+# Gemini 3 Flash — reasoning_effort ladder (low/medium/high) for per-op
+# think-budget tuning. Same model + pricing; only reasoning_effort differs.
+# Pick one for a stage in `models.yaml` when it needs heavier reasoning
+# without paying for it globally.
+llm:db-gemini-3-flash-low:
+  api_type: db-gemini
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: system.ai.gemini-3-flash
+  cost_per_input_token: 0.000000075
+  cost_per_output_token: 0.0000003
+  max_retries: 10
+  retry_base_delay: 30.0
+  retry_min_delay: 10.0
+  retry_max_delay: 120.0
+  generation_extras:
+    reasoning_effort: low
+
+llm:db-gemini-3-flash-medium:
+  api_type: db-gemini
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: system.ai.gemini-3-flash
+  cost_per_input_token: 0.000000075
+  cost_per_output_token: 0.0000003
+  max_retries: 10
+  retry_base_delay: 30.0
+  retry_min_delay: 10.0
+  retry_max_delay: 120.0
+  generation_extras:
+    reasoning_effort: medium
+
+llm:db-gemini-3-flash-high:
+  api_type: db-gemini
+  api_key: oauth2:databricks
+  base_url: ${DATABRICKS_HOST}/ai-gateway/mlflow/v1
+  model: system.ai.gemini-3-flash
+  cost_per_input_token: 0.000000075
+  cost_per_output_token: 0.0000003
+  max_retries: 10
+  retry_base_delay: 30.0
+  retry_min_delay: 10.0
+  retry_max_delay: 120.0
+  generation_extras:
+    reasoning_effort: high
+
+# Local llama.cpp — gemma4-e4b-envi-pruned-q8_0 (self-hosted, ngrok basic auth).
+# base_url embeds user:pass so httpx builds a proper Authorization: Basic header.
+# api_key is unused by the server but openai SDK rejects empty strings.
+llm:e4b-local:
+  api_type: openai
+  api_key: unused
+  base_url: ${E4B_LOCAL_BASE_URL}
+  model: gemma4-e4b-envi-pruned-q8_0.gguf
+  cost_per_input_token: 0.0
+  cost_per_output_token: 0.0
+  max_retries: 3
+  retry_base_delay: 2.0
+  retry_min_delay: 1.0
+  retry_max_delay: 10.0
+
+# =============================================================================
+# Corpus Retrieval — vector stores + doc store
+# =============================================================================
+#
+# The four `-pg` / `-triton` blocks below, named by `retrieval.*` in
+# `models.yaml`. `require_remote_retrieval()` refuses anything that resolves
+# to a local backend.
+#
+# NOTE: edit this file by hand. `ResourceHub.register()` persists through to
+# storage and rewrites the file without comments.
+
+# --- production ---------------------------------------------------------------
+#
+# Defining these costs nothing when unused: `ResourceHub.get()` instantiates
+# lazily, so a block nothing references never imports psycopg and never needs
+# its DSN to resolve.
+#
+# Schema + backfill: `operonx-run create_schema` (src/jobs/ingest/schema.sql)
+# and `operonx-run ingest --set seed=true`. The base tables are the partner's,
+# unchanged.
+#
+# `metadata_columns` is what a hit carries back, and `assemble_side` reads
+# `policy_id` and `severity` straight off it. `policy_id` is the variant id
+# (`POS-331#2`); the document it names holds that one phrasing, so a hit
+# needs no second coordinate.
+#
+# `sample_type` is deliberately absent: constant per table and nothing reads
+# it, while the DDL's CHECK requires the singular spelling.
+
+vector_store:corpus-pos-pg:
+  api_type: pgvector
+  metric: cosine
+  dsn: ${PG_DSN}
+  table: positive_embedding
+  metadata_columns: [policy_id, knowledge_id, severity]
+
+vector_store:corpus-cvo-pg:
+  api_type: pgvector
+  metric: cosine
+  dsn: ${PG_DSN}
+  table: carveout_embedding
+  metadata_columns: [policy_id, knowledge_id, severity]
+
+# No `collection:` — the graph passes collection="positives" / "carveouts" on
+# every DocFetchOp, and schema.sql creates views under those names
+# so the literal resolves. The views also alias knowledge_id -> group_id and
+# join knowledge_info for group_name.
+doc_store:corpus-pg:
+  api_type: postgres
+  dsn: ${PG_DSN}
+
+# The only embedder. Local, deploy and selfcheck all come here.
+#
+# `base_url` is a gRPC host:port with no scheme — TLS is selected by `ssl`,
+# not by the address, which is why an https:// URL here fails in a way that
+# reads like a certificate problem.
+#
+# The endpoint absorbed the tokeniser on 2026-09-21. The served model is
+# `bge_m3_embed`, it takes one BYTES input named TEXT, and it truncates at
+# 1024 itself — so `tokenizer_path` and `max_length` are gone rather than
+# left here meaning nothing. `input_name` selects that mode: unset, the
+# client tokenises and sends token ids instead, which is the contract the
+# older served model spoke.
+#
+# `model`, `input_name` and `embed_batch_size` are the served model's
+# contract, not settings: 8 is the server's max batch — above it Triton
+# rejects the request outright.
+#
+# A store seeded before 2026-09-21 (truncation 256, not 1024) must be
+# re-ingested — a stale seed answers every query and reports nothing.
+embedding:corpus-triton:
+  api_type: triton
+  # Defaults are the deployed endpoint, so an unset variable still points
+  # somewhere real rather than failing like an outage.
+  base_url: ${TRITON_EMBEDDING_URL:aic-ds2-collector-assistant-embedding.aws.coreai.win.dev:443}
+  ssl: ${TRITON_EMBEDDING_SSL:true}
+  model: bge_m3_embed
+  input_name: TEXT
+  output_name: sentence_embedding
+  embed_batch_size: 8
+  dimensions: 1024
+
+# =============================================================================
+# Observability Configurations
+# =============================================================================
+#
+# Langfuse + OpenTelemetry tracers were removed to eliminate PII leakage:
+# the pipeline passes full `Conversation` objects (with agent + customer
+# transcripts, including contact info in scoring payloads) into every LLM
+# op. Any remote tracer that captures op inputs would serialise that raw
+# content and ship it to an external host. Only in-process `local` tracer
+# (writes JSON to disk under PIPELINE_TRACER_LOCAL_DIR) remains supported.

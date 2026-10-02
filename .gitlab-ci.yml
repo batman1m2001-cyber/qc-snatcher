@@ -1,0 +1,41 @@
+fortify-sast-scancentral:
+   stage: test
+   
+   variables:
+      SSC_URL: "https://ssc.win.com.vn/ssc"
+      #SSC_TOKEN1: "12"
+      SSC_APP: "collector_assistant_sentiment"
+      SSC_PV: "0.0.1"
+   script:
+      # Nếu không phải là scan cho web hoặc không sử dụng jquery/bootstrap thì comment (#) ở dòng dưới
+      - scancentral arguments -targs "-exclude **/jquery* -exclude **/bootstrap*"
+      # VỚI SQL thì tên file source code cần kết thúc là .sql
+      # Nếu scan cho TSQL thì comment (#) ở dòng dưới
+      - scancentral arguments -targs "-sql-language PL/SQL"
+      - scancentral -sscurl $SSC_URL -ssctoken $SSC_TOKEN start -bt none -upload -application "$SSC_APP" -version "$SSC_PV" -uptoken $SSC_TOKEN
+      - ls -A ./ | xargs rm -rf
+   tags:
+      - fortify
+   when: manual
+   allow_failure: true
+
+# The offline suite, the 90-call snapshot included: no LLM, no .env, no
+# network beyond the image and package proxies (tests/_env.py pins placeholders
+# and a fixed token). uv.lock is exported and installed through the Nexus
+# pypi-proxy the Dockerfile uses, so no request goes to pypi.org.
+# If shared runners are off here, add `tags:` naming the team's docker runner.
+pytest:
+   stage: test
+   image: dockerhub-proxy.aws.platform.win.dev/library/python:3.12-slim
+   variables:
+      PIP_INDEX_URL: "https://registry.aws.platform.win.dev/repository/pypi-proxy/simple"
+      PIP_TRUSTED_HOST: "registry.aws.platform.win.dev"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+   script:
+      - pip install -q uv
+      - uv export --frozen --no-hashes --group dev --no-emit-project -o /tmp/requirements-ci.txt
+      - pip install -q -r /tmp/requirements-ci.txt
+      - python -m pytest tests -q -p no:cacheprovider
+   rules:
+      - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

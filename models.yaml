@@ -1,0 +1,39 @@
+# Which resource serves each pipeline stage.
+#
+# The ONLY place this is decided. `src.core.config` reads this file at
+# import; no environment variable overrides it. Changing a model is an edit
+# here plus a deploy — reviewed in the MR like any other behaviour change,
+# because it is one: the selfcheck baseline was recorded against exactly
+# these values.
+#
+# Every value names an entry in `resources.yaml`. Endpoints, credentials and
+# per-environment addresses stay in the environment, interpolated there
+# (`${DATABRICKS_HOST}`, `${PG_DSN}`, ...) — this file only picks names.
+#
+# `null` switches a stage off.
+
+llm:
+  # Every LLM op not named below: the scanner, the kid detector, and the
+  # other six cases.
+  default: db-gemini-3-flash
+
+  # l3's decider, the ASR check, and l2's halu check.
+  filter_decider: db-gemini-3-flash-high
+
+  # l4's strict re-verify. It resolves the cited corpus entry's severity,
+  # which sets `Score_offset` — `null` here means no call can ever score
+  # `Thái độ warning`, `cao` or `nghiêm trọng` from the corpus.
+  primary_decider: db-claude-4-sonnet
+
+  # l4's wording pass. Rewrites a kept verdict's reason; never changes it.
+  soften: db-gemini-3-flash
+
+  # The cheap LLM pre-filter in front of the scanner (l1). `null` leaves
+  # only the keyword filter, toggled by `SENTIMENT_FILTER_KEYWORD_ENABLE`.
+  prefilter: null
+
+retrieval:
+  embedding: corpus-triton
+  positives: corpus-pos-pg
+  carveouts: corpus-cvo-pg
+  documents: corpus-pg

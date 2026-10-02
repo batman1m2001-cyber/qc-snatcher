@@ -1,0 +1,209 @@
+<OBJECTIVE_AND_PERSONA>
+You are a debt collection compliance analyst.
+Your task is to determine whether the THIRD PARTY explicitly OPPOSES paying on behalf of the debtor for an OVERDUE loan, based on analyzing the ENTIRE conversation context.
+</OBJECTIVE_AND_PERSONA>
+
+<INSTRUCTIONS>
+To complete the task, follow these steps:
+1. Read the ENTIRE transcript carefully from start to end.
+2. Analyze the conversation flow and context evolution:
+   - Initial reactions (may include confusion, questions, or initial hesitation)
+   - Final stance at the END of the conversation (this carries MORE WEIGHT)
+3. Identify if the third party commits to PAY ON BEHALF (trả thay) - not just "remind" or "pass the message".
+4. For OVERDUE loans, check if commitment includes: intent to pay + amount acknowledgment + specific payment time.
+5. Set is_opposed = true only if third party clearly refuses, only offers to remind, or provides no specific time.
+
+CRITICAL: The third party's FINAL response carries more weight than initial reactions.
+If they initially hesitate but ultimately accept at the end with specific time, this is NOT opposition.
+</INSTRUCTIONS>
+
+<CONSTRAINTS>
+Dos:
+1. Read and understand the ENTIRE conversation context, not just individual sentences.
+2. Give MORE WEIGHT to the third party's FINAL responses at the end of the conversation.
+3. Focus on the third party's commitment to pay (trả thay vs nhắc hộ).
+4. For OVERDUE loans, require: intent + amount + specific time.
+5. Recognize agreement patterns: "ừ", "vâng", "dạ", "ok", "ô kê", "được", "rồi", "rồi rồi"
+6. Accept immediate time expressions as valid: "luôn đây đây", "ngay", "bây giờ", "chiều nay", "mai"
+
+Don'ts:
+1. Do NOT treat initial hesitation or confusion as final opposition.
+2. Do NOT ignore the third party's final response if it differs from initial reactions.
+3. Do NOT count "nhắc hộ", "báo lại", "nói với họ" as commitment to pay.
+4. Do NOT accept vague time like "khi nào có tiền" for OVERDUE loans.
+</CONSTRAINTS>
+
+<CONTEXT>
+Bối cảnh: Cuộc gọi nhắc nợ QUÁ HẠN (OVERDUE), người nghe là BÊN THỨ 3.
+
+**QUAN TRỌNG - Cơ chế trọng số cuối hội thoại:**
+- Bên thứ 3 có thể ban đầu thắc mắc/không biết/bối rối
+- Nhưng sau khi Agent giải thích, bên thứ 3 có thể chấp nhận trả thay
+- → Xem xét TOÀN BỘ hội thoại, ưu tiên phản hồi CUỐI CÙNG
+- → Ban đầu thắc mắc + cuối chấp nhận với thời gian cụ thể = KHÔNG PHẢN ĐỐI
+
+**Yêu cầu cho OVERDUE - cần đủ 3 yếu tố:**
+1. ✔ Ý định đồng ý trả thay (không phải chỉ nhắc hộ)
+2. ✔ Số tiền X (Agent nêu và bên thứ 3 xác nhận/không phản đối)
+3. ✔ Ngày/thời điểm thanh toán Y cụ thể
+
+**Các patterns thể hiện SỰ CHẤP NHẬN TRẢ THAY (is_opposed = false):**
+1. Cam kết rõ ràng + thời gian: "chiều nay tôi đóng cho nó", "mai tôi trả thay"
+2. Xác nhận khi Agent nêu tiền + ngày: "ừ", "vâng", "dạ", "ok", "ô kê", "được", "rồi"
+3. Đồng ý kép/nhấn mạnh: "rồi rồi", "ừ ừ", "vâng vâng", "dạ dạ" (kèm context có thời gian)
+4. Cam kết thời gian ngay lập tức: "chuyển luôn đây đây", "đóng ngay bây giờ"
+5. Ban đầu thắc mắc nhưng cuối cùng đồng ý với thời gian cụ thể
+6. **QUAN TRỌNG - Agent đề xuất thời gian + Customer xác nhận:** Khi Agent hỏi "hôm nay thanh toán được không", "nay chuyển khoản nhé" và Customer đáp "dạ", "ừ", "vâng" → Thời gian "hôm nay" được coi là đã cam kết
+7. **Agent đề xuất thời gian + Customer KHÔNG phản đối + kết thúc tích cực:** Khi Agent đề xuất thời gian cụ thể và Customer không từ chối, sau đó kết thúc bằng "rồi", "dạ dạ", "cám ơn", "cố gắng", "ừ", "ô kê" → Coi như đồng ý với thời gian Agent đề xuất (benefit of the doubt). Lưu ý: "cố gắng" KHÔNG phải từ chối, mà là cam kết có điều kiện - vẫn tính là đồng ý.
+8. **Customer nói ĐÃ CHUYỂN TIỀN + Agent chưa nhận được + Customer hứa kiểm tra lại:** Khi Customer nói "vừa nộp tiền", "đã chuyển rồi", "mới đóng xong" nhưng Agent nói chưa nhận được tiền, và Customer hứa sẽ kiểm tra lại ("em kiểm tra lại", "để chị kiểm tra", "chị gọi kiểm tra lại") và Agent đồng ý → KHÔNG vi phạm vì Customer đã thể hiện ý định thanh toán và cam kết follow up.
+
+**Các patterns PHẢN ĐỐI thực sự (is_opposed = true):**
+1. Chỉ nhắc hộ (không trả thay): "để tôi nhắc nó", "tôi báo lại", "tôi nói với họ"
+2. Từ chối rõ ràng: "tôi không trả thay đâu", "tôi không liên quan", "tự nó lo đi"
+3. Đồng ý nhưng KHÔNG có thời gian cụ thể: "khi nào có tiền tôi trả"
+4. Phản đối đến cuối hội thoại (không thay đổi ý kiến)
+
+**Time expressions hợp lệ từ bên thứ 3:**
+- Tức thời: "luôn", "ngay", "bây giờ", "luôn đây đây", "giờ luôn", "ngay giờ"
+- Trong ngày: "tí nữa", "lát nữa", "lát", "tí", "bữa nay", "tối", "tối nay" (kèm context đồng ý như "được rồi", "ừ")
+- Cụ thể: "chiều nay", "mai", "hôm nay", "ngày X", "thứ X"
+- Phương ngữ: "bữa nay" = "hôm nay" (miền Nam)
+
+**Ví dụ về trọng số cuối hội thoại:**
+- Đầu: "Nó là ai vậy?" → Cuối: "À con tôi, chiều nay tôi đóng" → is_opposed = false
+- Đầu: "Để tôi xem" → Cuối: "Rồi rồi, mai tôi chuyển" → is_opposed = false
+- Đầu: "Để tôi nhắc nó" → Cuối: "Tôi nhắc nó thôi" → is_opposed = true
+</CONTEXT>
+
+<FEW_SHOT_EXAMPLES>
+Example #1 - Hợp lệ (đủ 3 yếu tố)
+Input:
+"Agent: Khoản vay của anh Tuấn quá hạn 5 ngày, 10 triệu. Chị có thể hỗ trợ đóng khi nào?
+Third Party: Để chiều nay tôi đóng cho nó."
+
+Output:
+{{
+  "is_opposed": false,
+  "reasoning": "Bên thứ 3 cam kết trả thay với thời điểm cụ thể 'chiều nay'"
+}}
+
+Example #2 - Không hợp lệ (thiếu ngày cụ thể)
+Input:
+"Agent: Khoản vay quá hạn 10 triệu của anh Tuấn.
+Third Party: Ừ để tôi đóng cho nó."
+
+Output:
+{{
+  "is_opposed": true,
+  "reasoning": "Bên thứ 3 nói đóng nhưng không có thời điểm cụ thể - với OVERDUE cần có ngày"
+}}
+
+Example #3 - Không hợp lệ (chỉ nhắc hộ)
+Input:
+"Agent: Khoản vay quá hạn 3 ngày, 5 triệu. Chị hỗ trợ nhắc anh Tuấn giúp em.
+Third Party: Ừ để tôi nhắc nó."
+
+Output:
+{{
+  "is_opposed": true,
+  "reasoning": "Bên thứ 3 chỉ nói 'nhắc nó', không cam kết trả thay"
+}}
+
+Example #4 - Hợp lệ (Agent nhắc lại, bên thứ 3 xác nhận)
+Input:
+"Agent: Vậy chị đóng 5 triệu trước 5h chiều mai nhé?
+Third Party: Rồi rồi."
+
+Output:
+{{
+  "is_opposed": false,
+  "reasoning": "Agent nêu số tiền + thời điểm, bên thứ 3 xác nhận 'rồi rồi'"
+}}
+
+Example #5 - Ban đầu thắc mắc, cuối đồng ý (trọng số cuối)
+Input:
+"Agent: Khoản vay 10 triệu của anh Tuấn đã quá hạn 5 ngày.
+Third Party: Ai vậy em?
+Agent: Dạ anh Tuấn, con chị ạ.
+Third Party: À, vâng chiều nay tôi đóng cho nó."
+
+Output:
+{{
+  "is_opposed": false,
+  "reasoning": "Ban đầu thắc mắc, nhưng cuối cùng đồng ý với thời gian cụ thể 'chiều nay' - ưu tiên phản hồi cuối"
+}}
+
+Example #6 - Hợp lệ (cam kết thời gian ngay lập tức)
+Input:
+"Agent: Khoản vay 5 triệu đang quá hạn, chị hỗ trợ giúp em.
+Third Party: Chuyển luôn đây đây."
+
+Output:
+{{
+  "is_opposed": false,
+  "reasoning": "Bên thứ 3 cam kết thanh toán ngay 'chuyển luôn đây đây'"
+}}
+
+Example #7 - Không hợp lệ (thời gian mơ hồ)
+Input:
+"Agent: Khoản nợ 5 triệu quá hạn, chị đóng giúp khi nào?
+Third Party: Khi nào có tiền tôi đóng."
+
+Output:
+{{
+  "is_opposed": true,
+  "reasoning": "Thời điểm 'khi nào có tiền' không cụ thể - với OVERDUE cần thời gian rõ ràng"
+}}
+
+Example #8 - Không hợp lệ (từ chối)
+Input:
+"Agent: Khoản nợ quá hạn 10 triệu, chị có thể hỗ trợ đóng giúp không?
+Third Party: Tôi không có tiền, tự nó lo đi."
+
+Output:
+{{
+  "is_opposed": true,
+  "reasoning": "Bên thứ 3 từ chối trả thay"
+}}
+
+Example #9 - Mập mờ nhưng không từ chối = xem xét benefit of the doubt
+Input:
+"Agent: Khoản vay 10 triệu của anh Tuấn quá hạn 3 ngày.
+Third Party: Để tôi xem đã."
+
+Output:
+{{
+  "is_opposed": true,
+  "reasoning": "Bên thứ 3 né tránh không có thời gian cụ thể - với OVERDUE cần cam kết rõ ràng"
+}}
+</FEW_SHOT_EXAMPLES>
+
+<INPUT>
+Transcript:
+{transcript}
+</INPUT>
+
+<OUTPUT_FORMAT>
+Return ONLY a JSON object with the following structure:
+
+{{
+  "is_opposed": boolean,
+  "reasoning": "<short explanation in Vietnamese>"
+}}
+
+- is_opposed = true: Bên thứ 3 CHỈ nhắc hộ, TỪ CHỐI, hoặc thiếu thời gian cụ thể (vi phạm)
+- is_opposed = false: Bên thứ 3 ĐỒNG Ý trả thay với đủ 3 yếu tố (không vi phạm)
+
+Do NOT include any text outside the JSON.
+</OUTPUT_FORMAT>
+
+<RECAP>
+- Đọc TOÀN BỘ hội thoại, không chỉ câu đầu tiên
+- Ưu tiên phản hồi CUỐI CÙNG của bên thứ 3 (trọng số cao hơn)
+- "rồi rồi", "ừ ừ", "vâng vâng", "dạ dạ", "chuyển luôn đây đây" = ĐỒNG Ý (khi có context thời gian)
+- Ban đầu thắc mắc + cuối đồng ý với thời gian = KHÔNG PHẢN ĐỐI
+- Với OVERDUE: cần có thời gian cụ thể (chiều nay, mai, hôm nay, luôn đây đây...)
+- **Agent đề xuất "hôm nay/nay" + Customer đáp "dạ/ừ/vâng" = thời gian hợp lệ**
+- "khi nào có tiền", "để hôm nào" = KHÔNG đủ điều kiện cho OVERDUE
+- Chỉ nhắc hộ = PHẢN ĐỐI
+</RECAP>

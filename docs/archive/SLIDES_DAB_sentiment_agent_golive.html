@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DAB — Sentiment_Agent Pipeline Go-Live</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — light is the base; dark redefines tokens only.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --paper:    #f2f5f5;
+  --surface:  #ffffff;
+  --sunken:   #eaefef;
+  --line:     #d3dbdb;
+  --line-soft:#e4eaea;
+  --ink:      #0f1717;
+  --ink-2:    #33403f;
+  --muted:    #5d6c6c;
+  --accent:   #0a6a6e;
+  --accent-w: #e2f0f0;
+  --flag:     #a5322e;
+  --flag-w:   #fbeceb;
+  --ok:       #1a6b47;
+  --ok-w:     #e6f3ec;
+  --warn:     #8d5c07;
+  --warn-w:   #fbf2df;
+  --shadow:   0 1px 2px rgba(15,23,23,.06), 0 8px 24px rgba(15,23,23,.05);
+
+  --f-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --f-mono: Consolas, "Cascadia Mono", "SF Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:    #0b1111;
+    --surface:  #131c1c;
+    --sunken:   #0f1717;
+    --line:     #263131;
+    --line-soft:#1d2727;
+    --ink:      #e7eeed;
+    --ink-2:    #c2cfce;
+    --muted:    #8fa1a0;
+    --accent:   #4cbcc0;
+    --accent-w: #102a2b;
+    --flag:     #e8817c;
+    --flag-w:   #2c1817;
+    --ok:       #55bd8b;
+    --ok-w:     #12261e;
+    --warn:     #dca944;
+    --warn-w:   #2a2213;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:    #0b1111;
+  --surface:  #131c1c;
+  --sunken:   #0f1717;
+  --line:     #263131;
+  --line-soft:#1d2727;
+  --ink:      #e7eeed;
+  --ink-2:    #c2cfce;
+  --muted:    #8fa1a0;
+  --accent:   #4cbcc0;
+  --accent-w: #102a2b;
+  --flag:     #e8817c;
+  --flag-w:   #2c1817;
+  --ok:       #55bd8b;
+  --ok-w:     #12261e;
+  --warn:     #dca944;
+  --warn-w:   #2a2213;
+  --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── stage ────────────────────────────────────────────────── */
+.deck {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2vmin;
+}
+.stage {
+  position: relative;
+  width: min(100%, 172vh);
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  container-type: size;
+  container-name: stage;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 4.2cqw 5cqw 4.6cqw;
+  font-size: 1.55cqw;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.slide.is-active { display: flex; }
+
+/* ── rail ─────────────────────────────────────────────────── */
+.rail {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2cqw;
+  padding-bottom: 1.1cqw;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 2.4cqw;
+  flex: none;
+}
+.eyebrow {
+  font-size: 1.05cqw;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rail .num {
+  font-family: var(--f-mono);
+  font-size: 1.05cqw;
+  letter-spacing: .08em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── type ─────────────────────────────────────────────────── */
+h1, h2, h3 { margin: 0; text-wrap: balance; color: var(--ink); }
+h1 { font-size: 5.2cqw; font-weight: 700; letter-spacing: -.02em; line-height: 1.04; }
+h2 { font-size: 3.05cqw; font-weight: 700; letter-spacing: -.014em; line-height: 1.14; }
+h3 { font-size: 1.65cqw; font-weight: 700; letter-spacing: -.004em; }
+.lede {
+  font-size: 1.95cqw;
+  line-height: 1.42;
+  color: var(--muted);
+  max-width: 62ch;
+  margin: 1.1cqw 0 0;
+}
+.body { margin: 0; }
+.small { font-size: 1.25cqw; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: .93em; letter-spacing: -.01em; }
+strong { color: var(--ink); font-weight: 700; }
+em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+.stack { display: flex; flex-direction: column; gap: 2cqw; flex: 1 1 auto; min-height: 0; }
+.stack-tight { display: flex; flex-direction: column; gap: 1.2cqw; }
+.spacer { flex: 1 1 auto; }
+
+/* ── title slide ──────────────────────────────────────────── */
+.title-slide { justify-content: center; padding-left: 6cqw; padding-right: 6cqw; }
+.title-mark {
+  width: 7cqw; height: .42cqw;
+  background: var(--accent);
+  border-radius: 99px;
+  margin-bottom: 2.6cqw;
+}
+.title-meta {
+  display: flex; flex-wrap: wrap; gap: .8cqw 2.4cqw;
+  font-size: 1.3cqw; color: var(--muted);
+  margin-top: 3cqw; padding-top: 1.6cqw;
+  border-top: 1px solid var(--line-soft);
+}
+.title-meta b { color: var(--ink); font-weight: 600; }
+.qlist { display: flex; flex-direction: column; gap: .7cqw; margin-top: 2.6cqw; }
+.qlist div { display: flex; gap: 1cqw; font-size: 1.5cqw; }
+.qlist span {
+  font-family: var(--f-mono); color: var(--accent); font-weight: 700;
+  font-variant-numeric: tabular-nums; flex: none;
+}
+
+/* ── grids ────────────────────────────────────────────────── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2cqw; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+.g2-wide { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2.4cqw; }
+.g2-narrow { display: grid; grid-template-columns: .8fr 1fr; gap: 2.4cqw; }
+
+/* ── card ─────────────────────────────────────────────────── */
+.card {
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  padding: 1.5cqw 1.7cqw;
+  display: flex; flex-direction: column; gap: .6cqw;
+}
+.card h3 { font-size: 1.55cqw; }
+.card p { margin: 0; font-size: 1.4cqw; color: var(--muted); }
+.card.on-flag { background: var(--flag-w); border-color: color-mix(in srgb, var(--flag) 22%, transparent); }
+.card.on-ok   { background: var(--ok-w);   border-color: color-mix(in srgb, var(--ok) 24%, transparent); }
+.card.on-warn { background: var(--warn-w); border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
+.card.on-acc  { background: var(--accent-w); border-color: color-mix(in srgb, var(--accent) 26%, transparent); }
+
+.tag {
+  align-self: flex-start;
+  font-size: 1.02cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: .22cqw .7cqw; border-radius: 3px;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--line);
+}
+.tag.t-flag { color: var(--flag); border-color: color-mix(in srgb, var(--flag) 36%, transparent); }
+.tag.t-ok   { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 38%, transparent); }
+.tag.t-acc  { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.tag.t-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
+
+/* ── flow chain ───────────────────────────────────────────── */
+.flow { display: flex; align-items: stretch; gap: .5cqw; flex-wrap: wrap; }
+.flow > .node {
+  flex: 1 1 0; min-width: 0;
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 1cqw 1.1cqw;
+  font-size: 1.32cqw;
+  display: flex; flex-direction: column; gap: .3cqw;
+}
+.flow > .node b { font-size: 1.32cqw; }
+.flow > .node .who {
+  font-size: 1cqw; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700;
+}
+.flow > .arrow {
+  flex: none; align-self: center;
+  color: var(--line); font-size: 1.6cqw; font-weight: 700;
+}
+.flow.is-cold > .node { background: transparent; border-style: dashed; border-color: var(--line); color: var(--muted); }
+.flow.is-cold > .node b { color: var(--muted); font-weight: 600; }
+
+/* ── tables ───────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 1.32cqw; line-height: 1.38;
+}
+th, td {
+  text-align: left; vertical-align: top;
+  padding: .78cqw .9cqw;
+  border-bottom: 1px solid var(--line-soft);
+}
+th {
+  font-size: 1.05cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td b, th b { color: var(--ink); }
+td.n {
+  font-family: var(--f-mono); color: var(--accent); font-weight: 700;
+  font-variant-numeric: tabular-nums; width: 2.4cqw;
+}
+tr.is-out td { color: var(--muted); }
+tr.is-out td b { color: var(--muted); }
+
+/* ── numbered steps ───────────────────────────────────────── */
+.steps { display: grid; grid-template-columns: repeat(7, 1fr); gap: .7cqw; }
+.step {
+  border-top: .28cqw solid var(--accent);
+  padding-top: .9cqw;
+  display: flex; flex-direction: column; gap: .35cqw;
+}
+.step .k {
+  font-family: var(--f-mono); font-size: 1.05cqw; font-weight: 700;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.step b { font-size: 1.35cqw; }
+.step .who { font-size: 1.02cqw; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.step p { margin: 0; font-size: 1.2cqw; color: var(--muted); }
+.step.is-manual { border-top-color: var(--warn); }
+.step.is-manual .k { color: var(--warn); }
+
+/* ── quote / sample ───────────────────────────────────────── */
+.sample {
+  font-size: 1.5cqw;
+  padding: .75cqw 1cqw;
+  border-left: .28cqw solid var(--line);
+  background: var(--sunken);
+  border-radius: 0 4px 4px 0;
+}
+.sample.pos { border-left-color: var(--flag); }
+.sample.neg { border-left-color: var(--ok); }
+
+/* ── note ─────────────────────────────────────────────────── */
+.note {
+  border-left: .28cqw solid var(--accent);
+  background: var(--accent-w);
+  padding: 1cqw 1.4cqw;
+  border-radius: 0 4px 4px 0;
+  font-size: 1.42cqw;
+}
+.note.n-warn { border-left-color: var(--warn); background: var(--warn-w); }
+.note.n-flag { border-left-color: var(--flag); background: var(--flag-w); }
+
+/* ── stat ─────────────────────────────────────────────────── */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+.stat { display: flex; flex-direction: column; gap: .2cqw; }
+.stat .v {
+  font-size: 3.6cqw; font-weight: 700; letter-spacing: -.03em; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.stat .l { font-size: 1.25cqw; color: var(--muted); }
+.stat.is-acc .v { color: var(--accent); }
+.stat.is-flag .v { color: var(--flag); }
+
+/* ── mock UI ──────────────────────────────────────────────── */
+.mock {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface);
+  display: flex; flex-direction: column;
+}
+.mock-bar {
+  background: var(--sunken);
+  border-bottom: 1px solid var(--line-soft);
+  padding: .7cqw 1cqw;
+  font-size: 1.1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+}
+.mock-body { padding: 1.1cqw; display: flex; flex-direction: column; gap: .6cqw; }
+.mock-input {
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: .8cqw 1cqw;
+  font-size: 1.42cqw;
+  color: var(--ink);
+  background: var(--surface);
+}
+.row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 1cqw;
+  font-size: 1.3cqw;
+  padding: .42cqw 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.row:last-child { border-bottom: none; }
+.row .id { font-family: var(--f-mono); font-size: 1.12cqw; color: var(--muted); flex: none; }
+.row .sc { font-family: var(--f-mono); font-size: 1.12cqw; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.row .txt { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.hit .txt { color: var(--accent); font-weight: 600; }
+
+/* ── field list ───────────────────────────────────────────── */
+.fields { display: flex; flex-direction: column; gap: .55cqw; }
+.field { display: grid; grid-template-columns: 9.5cqw 1fr; gap: 1cqw; font-size: 1.34cqw; align-items: start; }
+.field .fk {
+  font-size: 1.08cqw; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); padding-top: .2cqw;
+}
+
+/* ── navigation chrome ────────────────────────────────────── */
+.progress {
+  position: absolute; top: 0; left: 0; height: .3cqw;
+  background: var(--accent);
+  transition: width .18s ease;
+  z-index: 5;
+}
+.nav {
+  position: fixed; right: 2.4vmin; bottom: 2.4vmin;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 5px 6px 5px 14px;
+  box-shadow: var(--shadow);
+  z-index: 20;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.nav button {
+  font: inherit; font-size: 15px; line-height: 1;
+  width: 30px; height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.nav button:hover { background: var(--sunken); }
+.nav button:focus-visible, .idx li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { position: fixed; left: 2.4vmin; bottom: 2.4vmin; font-size: 12px; color: var(--muted); z-index: 20; }
+.hint kbd {
+  font-family: var(--f-mono); font-size: 11px;
+  border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 3px; padding: 1px 5px; background: var(--surface); color: var(--ink);
+}
+
+.idx {
+  position: fixed; inset: 0; z-index: 30;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  backdrop-filter: blur(6px);
+  display: none;
+  padding: 6vmin 8vmin;
+  overflow: auto;
+}
+.idx.is-open { display: block; }
+.idx h2 { font-size: 20px; margin-bottom: 16px; }
+.idx ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+.idx li {
+  display: flex; gap: 12px; padding: 7px 8px; border-radius: 4px;
+  cursor: pointer; font-size: 14px; color: var(--ink-2);
+  break-inside: avoid;
+}
+.idx li:hover { background: var(--sunken); }
+.idx li .n { font-family: var(--f-mono); color: var(--accent); font-weight: 700; }
+.idx li.on { color: var(--accent); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ── print → one slide per page ───────────────────────────── */
+@page { size: A4 landscape; margin: 0; }
+@media print {
+  .nav, .hint, .idx, .progress { display: none !important; }
+  body { background: #fff; }
+  .deck { display: block; padding: 0; min-height: 0; }
+  .stage {
+    width: 100%; border: none; border-radius: 0; box-shadow: none;
+    aspect-ratio: auto; height: auto; container-type: normal;
+  }
+  .slide {
+    display: flex !important;
+    position: relative; inset: auto;
+    width: 297mm; height: 167mm;
+    padding: 12mm 14mm;
+    font-size: 10.5pt;
+    break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  h1 { font-size: 34pt; } h2 { font-size: 20pt; } h3 { font-size: 11pt; }
+  .lede { font-size: 13pt; } .eyebrow, .rail .num { font-size: 7.5pt; }
+  table { font-size: 9pt; } th { font-size: 7.5pt; }
+  .small, .step p, .card p { font-size: 8.6pt; }
+}
+/* ── figures ──────────────────────────────────────────────── */
+figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .9cqw;
+}
+figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--ink-2);
+}
+figcaption {
+  font-size: 1.15cqw;
+  color: var(--muted);
+  line-height: 1.45;
+}
+figcaption b { color: var(--ink-2); }
+.fig-t   { font-size: 13px; font-weight: 600; fill: var(--ink); }
+.fig-l   { font-size: 12px; fill: var(--ink-2); }
+.fig-s   { font-size: 11px; fill: var(--muted); }
+.fig-n   { font-size: 15px; font-weight: 700; fill: var(--ink); }
+.fig-box { fill: var(--sunken); stroke: var(--line); stroke-width: 1.2; }
+.fig-hi  { fill: var(--accent-w); stroke: var(--accent); stroke-width: 1.4; }
+.fig-bad { fill: var(--flag-w); stroke: var(--flag); stroke-width: 1.2; }
+.fig-ok  { fill: var(--ok-w); stroke: var(--ok); stroke-width: 1.2; }
+.fig-arw { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+.fig-dsh { stroke: var(--flag); stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+
+/* ── slide grows to its content ───────────────────────────────
+   The deck was locked to 16/9 with every slide absolutely
+   positioned inside it, so a slide carrying a diagram had to
+   shrink the diagram to fit the box. Screen presentation does not
+   need a fixed aspect: the stage now sizes to whichever slide is
+   showing, and `inline-size` keeps every `cqw` unit working.
+   Print still pins a landscape A4 page per slide.               */
+.stage {
+  aspect-ratio: auto;
+  min-height: min(86dvh, 54vw);
+  container-type: inline-size;
+}
+.slide {
+  position: relative;
+  inset: auto;
+  min-height: min(86dvh, 54vw);
+}
+.deck { align-items: start; padding: 2vmin 2vmin 8vmin; }
+
+/* ── room to breathe ──────────────────────────────────────────
+   Everything below assumes the stage above is no longer pinned
+   to 16/9, so content sets the height instead of fighting for
+   room inside it.                                              */
+
+/* `.steps` was `repeat(7, 1fr)` for a seven-step slide in the
+   deck this style came from. Four steps in a seven-column grid
+   occupy four sevenths of the width and read as an accident. */
+.steps { grid-template-columns: repeat(auto-fit, minmax(14cqw, 1fr)); gap: 1.4cqw; }
+
+/* No horizontal scrollbar under a table. A DAB table that has to
+   be dragged sideways to be read has lost the argument it was
+   making — let the cells wrap and the slide grow instead. */
+.tbl-wrap { overflow-x: visible; }
+th { white-space: normal; }
+table { font-size: 1.42cqw; }
+th, td { padding: .95cqw 1cqw; }
+
+/* Base type, now that height is not rationed. */
+.slide { font-size: 1.68cqw; padding: 4cqw 5cqw 5cqw; }
+.lede  { max-width: 74cqw; }
+.card p { font-size: 1.42cqw; }
+.note { font-size: 1.46cqw; }
+figcaption { font-size: 1.3cqw; max-width: 82cqw; }
+.stack { gap: 2.4cqw; }
+
+/* ── speaker notes tray ───────────────────────────────────────
+   Read-only by default so ← / → keep paging the deck; the pencil
+   switches one slide's note into an editable field, and only then
+   does the keyboard belong to the text. Edits persist in
+   localStorage, so a rehearsal edit survives a reload.          */
+.notes {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 40;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 24px rgba(15,23,23,.10);
+  font-family: var(--f-sans);
+  transition: transform .18s ease;
+}
+:root:not([data-theme="light"]) .notes { box-shadow: 0 -6px 24px rgba(0,0,0,.34); }
+.notes.is-closed { transform: translateY(calc(100% - 2.3rem)); }
+
+.notes-bar {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .4rem .9rem;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: .78rem;
+}
+.notes-bar .lbl {
+  font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); font-size: .66rem;
+  cursor: pointer; user-select: none;
+}
+.notes-bar .build { font-family: var(--f-mono); font-weight: 600;
+  letter-spacing: 0; text-transform: none; color: var(--accent); }
+.notes-bar .hintline { flex: 1 1 auto; color: var(--muted); font-size: .72rem; }
+.notes-bar kbd {
+  font-family: var(--f-mono); font-size: .68rem;
+  border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 3px; padding: 0 .3rem; color: var(--ink-2);
+}
+.notes-bar button {
+  font: inherit; font-size: .74rem;
+  display: inline-flex; align-items: center; gap: .3rem;
+  background: var(--sunken); color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: .22rem .6rem; cursor: pointer;
+}
+.notes-bar button:hover { border-color: var(--accent); color: var(--accent); }
+.notes-bar button svg { width: .85em; height: .85em; fill: none; stroke: currentColor; stroke-width: 1.8; }
+
+.notes-body {
+  padding: .8rem 1rem 1rem;
+  font-size: .88rem; line-height: 1.62; color: var(--ink-2);
+  height: 8.5rem; overflow-y: auto;
+  white-space: pre-wrap;
+}
+.notes textarea {
+  display: none;
+  width: 100%; height: 8.5rem; resize: vertical;
+  border: 0; outline: 0;
+  padding: .8rem 1rem 1rem;
+  background: var(--sunken); color: var(--ink);
+  font-family: var(--f-sans); font-size: .88rem; line-height: 1.62;
+}
+.notes.is-editing .notes-body { display: none; }
+.notes.is-editing textarea  { display: block; }
+.notes.is-editing .notes-bar { border-bottom-color: var(--accent); }
+
+/* keep the last line of a slide clear of the tray */
+.deck { padding-bottom: 13rem; }
+
+@media print {
+  .notes { display: none !important; }
+  .deck { padding-bottom: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="deck">
+<div class="stage" id="stage">
+<div class="progress" id="progress"></div>
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="var(--muted)"/>
+    </marker>
+  </defs>
+</svg>
+
+<!-- ═══ COVER ═══════════════════════════════════════════════ -->
+<section class="slide title-slide" data-title="Cover">
+  <div class="title-mark"></div>
+  <h1>DAB — Sentiment_Agent Pipeline</h1>
+  <p class="lede">Compliance screening on collection calls. Request for go-live approval of a retrieval-based pipeline and a QC-maintained knowledge base.</p>
+  <div class="title-meta">
+    <span>Scope: the <span class="mono">sentiment_agent</span> case — Agent Attitude · the six other QC cases are unchanged</span>
+    <span>Evidence: UAT 21–25 Aug 2026 · 334 calls · adjudicated by QC across both environments in parallel</span>
+  </div>
+</section>
+
+<!-- ═══ 01 · THE PROBLEM ════════════════════════════════════ -->
+<section class="slide" data-title="The problem">
+  <div class="rail"><span class="eyebrow">The problem</span><span class="num">01 / 10</span></div>
+  <div class="stack">
+    <h2>Screening 15,000–30,000 collection calls a day for compliance</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 412" role="img" aria-label="Left: 15 to 30 thousand collection calls are recorded every working day, of which manual review reaches only a small fraction. Right: two real minimal pairs from the policy corpus, where a single added phrase flips the verdict. Bottom: the corpus holds 919 entries expanded into 1,611 phrase variants, of which 904 are carve-outs.">
+        <text class="fig-s" x="8" y="20">EVERY WORKING DAY</text>
+        <text x="8" y="66" font-size="34" font-weight="700" fill="var(--ink)">15,000 &#8211; 30,000</text>
+        <text class="fig-l" x="8" y="88">collection calls recorded</text>
+
+        <g fill="var(--sunken)" stroke="var(--line)" stroke-width="1">
+          <rect x="8"   y="108" width="8" height="8" rx="1"/><rect x="19"  y="108" width="8" height="8" rx="1"/>
+          <rect x="30"  y="108" width="8" height="8" rx="1"/><rect x="41"  y="108" width="8" height="8" rx="1"/>
+          <rect x="52"  y="108" width="8" height="8" rx="1"/><rect x="63"  y="108" width="8" height="8" rx="1"/>
+          <rect x="74"  y="108" width="8" height="8" rx="1"/><rect x="85"  y="108" width="8" height="8" rx="1"/>
+          <rect x="96"  y="108" width="8" height="8" rx="1"/><rect x="107" y="108" width="8" height="8" rx="1"/>
+          <rect x="118" y="108" width="8" height="8" rx="1"/><rect x="129" y="108" width="8" height="8" rx="1"/>
+          <rect x="140" y="108" width="8" height="8" rx="1"/><rect x="151" y="108" width="8" height="8" rx="1"/>
+          <rect x="162" y="108" width="8" height="8" rx="1"/><rect x="173" y="108" width="8" height="8" rx="1"/>
+          <rect x="184" y="108" width="8" height="8" rx="1"/><rect x="195" y="108" width="8" height="8" rx="1"/>
+          <rect x="206" y="108" width="8" height="8" rx="1"/><rect x="217" y="108" width="8" height="8" rx="1"/>
+          <rect x="228" y="108" width="8" height="8" rx="1"/><rect x="239" y="108" width="8" height="8" rx="1"/>
+          <rect x="250" y="108" width="8" height="8" rx="1"/><rect x="261" y="108" width="8" height="8" rx="1"/>
+          <rect x="8"   y="119" width="8" height="8" rx="1"/><rect x="19"  y="119" width="8" height="8" rx="1"/>
+          <rect x="30"  y="119" width="8" height="8" rx="1"/><rect x="41"  y="119" width="8" height="8" rx="1"/>
+          <rect x="52"  y="119" width="8" height="8" rx="1"/><rect x="63"  y="119" width="8" height="8" rx="1"/>
+          <rect x="74"  y="119" width="8" height="8" rx="1"/><rect x="85"  y="119" width="8" height="8" rx="1"/>
+          <rect x="96"  y="119" width="8" height="8" rx="1"/><rect x="107" y="119" width="8" height="8" rx="1"/>
+          <rect x="118" y="119" width="8" height="8" rx="1"/><rect x="129" y="119" width="8" height="8" rx="1"/>
+          <rect x="140" y="119" width="8" height="8" rx="1"/><rect x="151" y="119" width="8" height="8" rx="1"/>
+          <rect x="162" y="119" width="8" height="8" rx="1"/><rect x="173" y="119" width="8" height="8" rx="1"/>
+          <rect x="184" y="119" width="8" height="8" rx="1"/><rect x="195" y="119" width="8" height="8" rx="1"/>
+          <rect x="206" y="119" width="8" height="8" rx="1"/><rect x="217" y="119" width="8" height="8" rx="1"/>
+          <rect x="228" y="119" width="8" height="8" rx="1"/><rect x="239" y="119" width="8" height="8" rx="1"/>
+          <rect x="250" y="119" width="8" height="8" rx="1"/><rect x="261" y="119" width="8" height="8" rx="1"/>
+          <rect x="8"   y="130" width="8" height="8" rx="1"/><rect x="19"  y="130" width="8" height="8" rx="1"/>
+          <rect x="30"  y="130" width="8" height="8" rx="1"/><rect x="41"  y="130" width="8" height="8" rx="1"/>
+          <rect x="52"  y="130" width="8" height="8" rx="1"/><rect x="63"  y="130" width="8" height="8" rx="1"/>
+          <rect x="74"  y="130" width="8" height="8" rx="1"/><rect x="85"  y="130" width="8" height="8" rx="1"/>
+          <rect x="96"  y="130" width="8" height="8" rx="1"/><rect x="107" y="130" width="8" height="8" rx="1"/>
+          <rect x="118" y="130" width="8" height="8" rx="1"/><rect x="129" y="130" width="8" height="8" rx="1"/>
+          <rect x="140" y="130" width="8" height="8" rx="1"/><rect x="151" y="130" width="8" height="8" rx="1"/>
+          <rect x="162" y="130" width="8" height="8" rx="1"/><rect x="173" y="130" width="8" height="8" rx="1"/>
+          <rect x="184" y="130" width="8" height="8" rx="1"/><rect x="195" y="130" width="8" height="8" rx="1"/>
+          <rect x="206" y="130" width="8" height="8" rx="1"/><rect x="217" y="130" width="8" height="8" rx="1"/>
+          <rect x="228" y="130" width="8" height="8" rx="1"/><rect x="239" y="130" width="8" height="8" rx="1"/>
+          <rect x="250" y="130" width="8" height="8" rx="1"/><rect x="261" y="130" width="8" height="8" rx="1"/>
+          <rect x="8"   y="141" width="8" height="8" rx="1"/><rect x="19"  y="141" width="8" height="8" rx="1"/>
+          <rect x="30"  y="141" width="8" height="8" rx="1"/><rect x="41"  y="141" width="8" height="8" rx="1"/>
+          <rect x="52"  y="141" width="8" height="8" rx="1"/><rect x="63"  y="141" width="8" height="8" rx="1"/>
+          <rect x="74"  y="141" width="8" height="8" rx="1"/><rect x="85"  y="141" width="8" height="8" rx="1"/>
+          <rect x="96"  y="141" width="8" height="8" rx="1"/><rect x="107" y="141" width="8" height="8" rx="1"/>
+          <rect x="118" y="141" width="8" height="8" rx="1"/><rect x="129" y="141" width="8" height="8" rx="1"/>
+          <rect x="140" y="141" width="8" height="8" rx="1"/><rect x="151" y="141" width="8" height="8" rx="1"/>
+          <rect x="162" y="141" width="8" height="8" rx="1"/><rect x="173" y="141" width="8" height="8" rx="1"/>
+          <rect x="184" y="141" width="8" height="8" rx="1"/><rect x="195" y="141" width="8" height="8" rx="1"/>
+          <rect x="206" y="141" width="8" height="8" rx="1"/><rect x="217" y="141" width="8" height="8" rx="1"/>
+          <rect x="228" y="141" width="8" height="8" rx="1"/><rect x="239" y="141" width="8" height="8" rx="1"/>
+          <rect x="250" y="141" width="8" height="8" rx="1"/><rect x="261" y="141" width="8" height="8" rx="1"/>
+        </g>
+        <g class="fig-hi">
+          <rect x="8"  y="108" width="8" height="8" rx="1"/><rect x="19" y="108" width="8" height="8" rx="1"/>
+          <rect x="8"  y="119" width="8" height="8" rx="1"/>
+        </g>
+        <rect class="fig-hi" x="8" y="166" width="10" height="10" rx="2"/>
+        <text class="fig-s" x="26" y="175">what manual review can sample</text>
+        <text class="fig-s" x="8" y="200" fill="var(--flag)">everything else is judged by the system &#8212; or by nobody</text>
+
+        <line x1="316" y1="8" x2="316" y2="256" stroke="var(--line)" stroke-width="1"/>
+
+        <text class="fig-t" x="336" y="20">Why the judgement is hard &#8212; two real pairs from the policy corpus</text>
+
+        <text class="fig-s" x="336" y="42">STEERING THE CALL</text>
+        <rect class="fig-ok" x="336" y="50" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="71">&#8220;anh ch&#7883; b&#236;nh t&#297;nh trao &#273;&#7893;i &#273;&#432;&#7907;c kh&#244;ng&#8221;</text>
+        <text class="fig-s" x="1000" y="71" text-anchor="end" fill="var(--ok)">NOT A VIOLATION</text>
+        <rect class="fig-bad" x="336" y="86" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="107">&#8220;anh c&#243; trao &#273;&#7893;i l&#7883;ch s&#7921; &#273;&#432;&#7907;c kh&#244;ng &#7841;&#8221;</text>
+        <text class="fig-s" x="1000" y="107" text-anchor="end" fill="var(--flag)">VIOLATION &#183; warning</text>
+        <text class="fig-s" x="348" y="136" fill="var(--muted)">Same sentence frame, one word swapped. Steering the customer to stay calm is allowed; asking whether they can be polite judges their manners.</text>
+
+        <text class="fig-s" x="336" y="166">ENDING THE CALL</text>
+        <rect class="fig-ok" x="336" y="174" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="195">&#8220;n&#7871;u nh&#432; anh kh&#244;ng trao &#273;&#7893;i l&#7883;ch s&#7921; th&#236; em xin ph&#233;p ng&#7855;t m&#225;y&#8221;</text>
+        <text class="fig-s" x="1000" y="195" text-anchor="end" fill="var(--ok)">NOT A VIOLATION</text>
+        <rect class="fig-bad" x="336" y="210" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="231">&#8220;n&#7871;u m&#224; anh b&#7845;t l&#7883;ch s&#7921; th&#236; em xin ph&#233;p ng&#7855;t m&#225;y&#8221;</text>
+        <text class="fig-s" x="1000" y="231" text-anchor="end" fill="var(--flag)">VIOLATION &#183; warning</text>
+        <text class="fig-s" x="348" y="260" fill="var(--muted)">One word. &#8216;kh&#244;ng l&#7883;ch s&#7921;&#8217; states a condition for ending the call; &#8216;b&#7845;t l&#7883;ch s&#7921;&#8217; puts a label on the person.</text>
+
+        <line x1="8" y1="278" x2="1012" y2="278" stroke="var(--line)" stroke-width="1"/>
+
+        <text class="fig-t" x="8" y="302">The rulebook QC maintains today</text>
+        <rect class="fig-bad" x="8" y="314" width="328" height="56" rx="4"/>
+        <text class="fig-n" x="172" y="338" text-anchor="middle">421 entries &#183; 707 variants</text>
+        <text class="fig-s" x="172" y="357" text-anchor="middle">violation examples</text>
+        <rect class="fig-ok" x="348" y="314" width="328" height="56" rx="4"/>
+        <text class="fig-n" x="512" y="338" text-anchor="middle">498 entries &#183; 904 variants</text>
+        <text class="fig-s" x="512" y="357" text-anchor="middle">carve-outs &#8212; explicitly not violations</text>
+        <rect class="fig-box" x="688" y="314" width="324" height="56" rx="4"/>
+        <text class="fig-n" x="850" y="338" text-anchor="middle">919 entries &#183; 1,611 variants</text>
+        <text class="fig-s" x="850" y="357" text-anchor="middle">in force across 81 categories</text>
+        <text class="fig-s" x="8" y="396" fill="var(--flag)">Carve-outs outnumber violations &#8212; most of the business effort goes into stating what is NOT a violation. All of it ships inside the software package today.</text>
+      </svg>
+      <figcaption>Three properties define the problem: the <b>volume</b> exceeds manual review, the <b>verdict turns on a word or two of context</b>, and the <b>rulebook changes continuously</b>. Samples above are verbatim from <span class="mono">corpus.yaml</span>.</figcaption>
+    </figure>
+
+    <div class="g3">
+      <div class="card on-flag">
+        <span class="tag t-flag">Cost of a false alarm</span>
+        <p>QC time spent on a clean call. If the flag survives review, an agent carries a mark for something that did not happen.</p>
+      </div>
+      <div class="card on-flag">
+        <span class="tag t-flag">Cost of a miss</span>
+        <p>Compliance exposure — and it is <b>silent</b>. No queue entry, no record, no signal that anything was missed.</p>
+      </div>
+      <div class="card on-warn">
+        <span class="tag t-warn">Cost of slow rules</span>
+        <p>QC owns the judgement but not the rulebook. Every correction they want is a development and release cycle.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 02 · PRODUCTION TODAY ═══════════════════════════════ -->
+<section class="slide" data-title="Production today">
+  <div class="rail"><span class="eyebrow">Baseline · what runs on live</span><span class="num">02 / 10</span></div>
+  <div class="stack">
+    <h2>Production today: one prompt, with the whole rulebook pasted in</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 250" role="img" aria-label="The live pipeline: a call passes a silent gate and a short-call gate, then a single-block Scanner prompt, then a Verifier that receives the entire rulebook and issues the verdict. There is no retrieval anywhere in the flow.">
+        <rect class="fig-box" x="8" y="72" width="104" height="50" rx="5"/>
+        <text class="fig-l" x="60" y="103" text-anchor="middle">Call</text>
+        <line class="fig-arw" x1="116" y1="97" x2="146" y2="97" marker-end="url(#a1)"/>
+
+        <rect class="fig-box" x="152" y="72" width="180" height="50" rx="5"/>
+        <text class="fig-s" x="242" y="93" text-anchor="middle">Silent · short-call gates</text>
+        <text class="fig-s" x="242" y="110" text-anchor="middle">cheap exits</text>
+        <line class="fig-arw" x1="336" y1="97" x2="366" y2="97" marker-end="url(#a1)"/>
+
+        <rect class="fig-bad" x="372" y="72" width="180" height="50" rx="5"/>
+        <text class="fig-s" x="462" y="93" text-anchor="middle">Scanner</text>
+        <text class="fig-s" x="462" y="110" text-anchor="middle">single-block prompt</text>
+        <line class="fig-arw" x1="556" y1="97" x2="586" y2="97" marker-end="url(#a1)"/>
+
+        <rect class="fig-bad" x="592" y="64" width="230" height="66" rx="5"/>
+        <text class="fig-t" x="707" y="90" text-anchor="middle">Verifier</text>
+        <text class="fig-s" x="707" y="110" text-anchor="middle">receives the entire rulebook</text>
+        <line class="fig-arw" x1="826" y1="97" x2="866" y2="97" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="872" y="72" width="140" height="50" rx="5"/>
+        <text class="fig-l" x="942" y="103" text-anchor="middle">Verdict</text>
+
+        <path class="fig-dsh" d="M242,126 L242,168 L640,168" marker-end="url(#a1)"/>
+        <text class="fig-s" x="252" y="162">gate exit</text>
+        <rect class="fig-box" x="646" y="148" width="140" height="40" rx="5"/>
+        <text class="fig-s" x="716" y="172" text-anchor="middle">No violation</text>
+
+        <text class="fig-s" x="8" y="30" fill="var(--flag)">No retrieval anywhere in the flow · knowledge is text inside the prompt · one model tier for every stage</text>
+        <text class="fig-s" x="8" y="232" fill="var(--muted)">Version on live is prompt engineering: all 1,611 policy variants from the previous slide are pasted in wholesale, unfiltered by the sentence being judged.</text>
+      </svg>
+      <figcaption>The defect is structural, not a shortfall of tuning.</figcaption>
+    </figure>
+
+    <div class="g2-wide">
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Weakness</th><th>Consequence</th></tr></thead>
+        <tbody>
+          <tr><td><b>Knowledge diluted in context</b></td><td>The two or three rules that matter sit among hundreds that do not. The model catches the surface phrase but cannot apply the carve-out.</td></tr>
+          <tr><td><b>Errors cannot be attributed</b></td><td>One decision step, so a wrong verdict cannot be traced. Every fix edits the whole prompt and waits on a full re-measurement.</td></tr>
+          <tr><td><b>Rules ship with the code</b></td><td>A QC wording change is a software release. The rulebook cannot keep pace with the floor.</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="stats">
+        <div class="stat is-flag"><span class="l">Flagged calls that were clean</span><span class="v">4 / 5</span></div>
+        <div class="stat is-flag"><span class="l">Violations caught</span><span class="v">46 %</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 03 · PROPOSED ═══════════════════════════════════════ -->
+<section class="slide" data-title="Proposed pipeline">
+  <div class="rail"><span class="eyebrow">Proposed · measured under UAT</span><span class="num">03 / 10</span></div>
+  <div class="stack">
+    <h2>Retrieve the relevant policy first, then decide</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 400" role="img" aria-label="The proposed pipeline runs top to bottom: gates including a new bot check, then Scanner, Attribution and Halu check, then a Decider, then optional secondary decision and reason softening before the verdict. Below the Decider sit two retrieval pools, violation examples and carve-outs kept separate, both fed from the Postgres pgvector knowledge base.">
+        <text class="fig-s" x="8" y="20" fill="var(--ok)">New in this release: bot check · two-pool retrieval · secondary decider · soften — each stage traced separately</text>
+
+        <rect class="fig-box" x="8" y="34" width="92" height="46" rx="5"/>
+        <text class="fig-l" x="54" y="63" text-anchor="middle">Call</text>
+        <line class="fig-arw" x1="104" y1="57" x2="124" y2="57" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="130" y="34" width="300" height="46" rx="5"/>
+        <text class="fig-s" x="280" y="53" text-anchor="middle">Gates — silent · short-call · bot check</text>
+        <text class="fig-s" x="280" y="70" text-anchor="middle" fill="var(--ok)">bot check is new: a machine answered, so nothing is scored</text>
+        <path class="fig-dsh" d="M434,57 L456,57" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="462" y="34" width="150" height="46" rx="5"/>
+        <text class="fig-s" x="537" y="62" text-anchor="middle">No violation</text>
+
+        <line class="fig-arw" x1="280" y1="84" x2="280" y2="112" marker-end="url(#a1)"/>
+
+        <rect class="fig-box" x="130" y="116" width="170" height="52" rx="5"/>
+        <text class="fig-s" x="215" y="138" text-anchor="middle">Scanner</text>
+        <text class="fig-s" x="215" y="156" text-anchor="middle">locate suspect turns</text>
+        <line class="fig-arw" x1="304" y1="142" x2="324" y2="142" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="330" y="116" width="190" height="52" rx="5"/>
+        <text class="fig-s" x="425" y="138" text-anchor="middle">Attribution · Halu check</text>
+        <text class="fig-s" x="425" y="156" text-anchor="middle">the quote must be real</text>
+        <line class="fig-arw" x1="524" y1="142" x2="544" y2="142" marker-end="url(#a1)"/>
+        <rect class="fig-ok" x="550" y="110" width="180" height="64" rx="5"/>
+        <text class="fig-t" x="640" y="136" text-anchor="middle">Decider</text>
+        <text class="fig-s" x="640" y="156" text-anchor="middle">one decision pass</text>
+        <line class="fig-arw" x1="734" y1="142" x2="750" y2="142" marker-end="url(#a1)"/>
+        <rect class="fig-ok" x="756" y="116" width="126" height="52" rx="5"/>
+        <text class="fig-s" x="819" y="138" text-anchor="middle">Secondary · Soften</text>
+        <text class="fig-s" x="819" y="156" text-anchor="middle">optional</text>
+        <line class="fig-arw" x1="886" y1="142" x2="900" y2="142" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="906" y="116" width="106" height="52" rx="5"/>
+        <text class="fig-l" x="959" y="147" text-anchor="middle">Verdict</text>
+
+        <path class="fig-arw" d="M530,212 L530,194 L605,194 L605,178" marker-end="url(#a1)" stroke-dasharray="4 3"/>
+        <path class="fig-arw" d="M722,212 L722,194 L675,194 L675,178" marker-end="url(#a1)" stroke-dasharray="4 3"/>
+        <rect class="fig-hi" x="440" y="216" width="180" height="56" rx="5"/>
+        <text class="fig-s" x="530" y="238" text-anchor="middle">Positives pool</text>
+        <text class="fig-s" x="530" y="256" text-anchor="middle">top-K nearest this turn</text>
+        <rect class="fig-hi" x="632" y="216" width="180" height="56" rx="5"/>
+        <text class="fig-s" x="722" y="238" text-anchor="middle">Carve-outs pool</text>
+        <text class="fig-s" x="722" y="256" text-anchor="middle">top-K · kept separate</text>
+
+        <line class="fig-arw" x1="626" y1="296" x2="626" y2="276" marker-end="url(#a1)"/>
+        <rect class="fig-hi" x="440" y="300" width="372" height="52" rx="5"/>
+        <text class="fig-t" x="626" y="324" text-anchor="middle">Knowledge base — Postgres + pgvector</text>
+        <text class="fig-s" x="626" y="342" text-anchor="middle">shared store, maintained by QC — next slide</text>
+
+        <text class="fig-s" x="8" y="386" fill="var(--muted)">The Decider never sees the whole rulebook. It sees the handful of entries nearest the sentence under review — violations and carve-outs side by side.</text>
+      </svg>
+      <figcaption>The one change that carries the result: <b>carve-outs are retrieved as first-class context</b>, so the model can tell a real violation from a phrase that merely sounds like one.</figcaption>
+    </figure>
+
+    <div class="stats">
+      <div class="stat is-acc"><span class="l">False alarms</span><span class="v">177 → 68</span></div>
+      <div class="stat is-acc"><span class="l">Missed violations</span><span class="v">53 → 20</span></div>
+      <div class="stat is-acc"><span class="l">Flagged calls that were real</span><span class="v">20 % → 53 %</span></div>
+      <div class="stat is-acc"><span class="l">Violations caught</span><span class="v">46 % → 80 %</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 04 · KNOWLEDGE BASE ═════════════════════════════════ -->
+<section class="slide" data-title="Knowledge base">
+  <div class="rail"><span class="eyebrow">Architecture · knowledge base</span><span class="num">04 / 10</span></div>
+  <div class="stack">
+    <h2>The knowledge base: Postgres + pgvector, maintained by QC</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 400" role="img" aria-label="Ingest reads the QC-authored corpus, embeds it with BGE-M3 and upserts into Postgres. The schema holds a policy group table, a policy entry table carrying severity and a batch id, and two vector tables with HNSW indexes, 707 violation vectors and 904 carve-out vectors. At runtime the sentence under review is embedded and searched against those indexes to build the two pools the Decider reads. A QC edit is re-ingested and live on the next batch, and a startup check refuses to run when the store and the corpus disagree.">
+        <text class="fig-s" x="8" y="18">AUTHORING · INGEST</text>
+        <rect class="fig-box" x="8" y="32" width="128" height="52" rx="5"/>
+        <text class="fig-s" x="72" y="54" text-anchor="middle">corpus.yaml</text>
+        <text class="fig-s" x="72" y="71" text-anchor="middle">QC-authored</text>
+        <line class="fig-arw" x1="140" y1="58" x2="158" y2="58" marker-end="url(#a1)"/>
+        <rect class="fig-hi" x="164" y="26" width="168" height="64" rx="5"/>
+        <text class="fig-t" x="248" y="50" text-anchor="middle">Ingest</text>
+        <text class="fig-s" x="248" y="68" text-anchor="middle">parse · embed BGE-M3</text>
+        <text class="fig-s" x="248" y="82" text-anchor="middle">upsert · prune</text>
+        <path class="fig-arw" d="M336,58 L348,58 L348,70 L364,70" marker-end="url(#a1)"/>
+
+        <rect x="368" y="26" width="356" height="248" rx="7" fill="none" stroke="var(--accent)" stroke-width="1.4"/>
+        <text class="fig-t" x="384" y="48" fill="var(--accent)">Postgres + pgvector</text>
+
+        <rect class="fig-box" x="384" y="58" width="324" height="40" rx="4"/>
+        <text class="fig-s" x="396" y="82">knowledge_info — policy group</text>
+        <line class="fig-arw" x1="546" y1="100" x2="546" y2="114" marker-end="url(#a1)"/>
+        <text class="fig-s" x="556" y="112">1 : N</text>
+
+        <rect class="fig-box" x="384" y="116" width="324" height="48" rx="4"/>
+        <text class="fig-s" x="396" y="136">knowledge_policy — one row per entry</text>
+        <text class="fig-s" x="396" y="154" fill="var(--accent)">severity · batch_id · content</text>
+
+        <line class="fig-arw" x1="466" y1="166" x2="466" y2="182" marker-end="url(#a1)"/>
+        <line class="fig-arw" x1="626" y1="166" x2="626" y2="182" marker-end="url(#a1)"/>
+        <rect class="fig-bad" x="384" y="184" width="158" height="56" rx="4"/>
+        <text class="fig-s" x="463" y="204" text-anchor="middle">positive_embedding</text>
+        <text class="fig-s" x="463" y="222" text-anchor="middle">707 vectors · HNSW</text>
+        <rect class="fig-ok" x="550" y="184" width="158" height="56" rx="4"/>
+        <text class="fig-s" x="629" y="204" text-anchor="middle">carveout_embedding</text>
+        <text class="fig-s" x="629" y="222" text-anchor="middle">904 vectors · HNSW</text>
+        <text class="fig-s" x="384" y="260" fill="var(--muted)">delete an entry → its vectors cascade · a group cannot be deleted while entries exist</text>
+
+        <text class="fig-s" x="756" y="18">RUNTIME · RETRIEVAL</text>
+        <rect class="fig-box" x="756" y="32" width="256" height="44" rx="5"/>
+        <text class="fig-s" x="884" y="59" text-anchor="middle">Sentence under review</text>
+        <line class="fig-arw" x1="884" y1="80" x2="884" y2="94" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="756" y="98" width="256" height="40" rx="5"/>
+        <text class="fig-s" x="884" y="123" text-anchor="middle">BGE-M3 embedding</text>
+        <line class="fig-arw" x1="884" y1="142" x2="884" y2="156" marker-end="url(#a1)"/>
+        <rect class="fig-hi" x="756" y="160" width="256" height="48" rx="5"/>
+        <text class="fig-s" x="884" y="180" text-anchor="middle">ANN search over both indexes</text>
+        <text class="fig-s" x="884" y="198" text-anchor="middle">top-K each · ef_search 200</text>
+        <path class="fig-arw" d="M712,212 L734,212 L734,184 L752,184" marker-end="url(#a1)"/>
+        <line class="fig-arw" x1="884" y1="212" x2="884" y2="226" marker-end="url(#a1)"/>
+        <rect class="fig-ok" x="756" y="230" width="256" height="44" rx="5"/>
+        <text class="fig-s" x="884" y="257" text-anchor="middle">Two pools → Decider</text>
+
+        <line x1="8" y1="296" x2="1012" y2="296" stroke="var(--line)" stroke-width="1"/>
+
+        <rect class="fig-ok" x="8" y="312" width="324" height="62" rx="5"/>
+        <text class="fig-t" x="24" y="334">QC edits an entry</text>
+        <text class="fig-s" x="24" y="352">re-ingest → live on the next batch</text>
+        <text class="fig-s" x="24" y="368" fill="var(--ok)">no code change · no software release</text>
+        <path class="fig-arw" d="M170,308 L170,96" marker-end="url(#a1)"/>
+
+        <rect class="fig-bad" x="348" y="312" width="376" height="62" rx="5"/>
+        <text class="fig-t" x="364" y="334">Startup check — corpus digest vs batch_id</text>
+        <text class="fig-s" x="364" y="352">mismatch, or store unreachable → refuse to start</text>
+        <text class="fig-s" x="364" y="368" fill="var(--flag)">never score against a stale rulebook, silently</text>
+        <line class="fig-arw" x1="536" y1="308" x2="536" y2="280" marker-end="url(#a1)"/>
+
+        <rect class="fig-hi" x="740" y="312" width="272" height="62" rx="5"/>
+        <text class="fig-t" x="756" y="334">Substrate verified</text>
+        <text class="fig-s" x="756" y="352">all 1,611 entries replayed, old store vs new</text>
+        <text class="fig-s" x="756" y="368" fill="var(--accent)">1,611 / 1,611 identical — no model involved</text>
+      </svg>
+      <figcaption>Severity now lives on the QC-authored entry rather than in code, so re-grading a behaviour is an edit and a reload — not a release.</figcaption>
+    </figure>
+
+    <div class="g3">
+      <div class="card on-ok">
+        <span class="tag t-ok">Ownership</span>
+        <p>QC edits the entry; engineering is no longer on the path. This is the precondition for QC maintaining the rulebook directly.</p>
+      </div>
+      <div class="card on-ok">
+        <span class="tag t-ok">One source</span>
+        <p>Every running instance reads the same store. No packaged copies left to drift apart unnoticed.</p>
+      </div>
+      <div class="card on-warn">
+        <span class="tag t-warn">Contract change</span>
+        <p>Severity from the entry means the output can carry a new <span class="mono">Warning</span> value. Downstream confirmation required before traffic opens.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div><!-- /stage -->
+</div><!-- /deck -->
+
+<div class="nav">
+  <span id="counter">1 / 5</span>
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<p class="hint"><kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>Esc</kbd> contents · <kbd>N</kbd> notes · <kbd>E</kbd> edit notes · <kbd>Ctrl</kbd>+<kbd>P</kbd> export PDF</p>
+
+<nav class="idx" id="idx" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol id="idxList"></ol>
+</nav>
+
+<script>
+(function () {
+  var slides   = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var counter  = document.getElementById('counter');
+  var progress = document.getElementById('progress');
+  var idx      = document.getElementById('idx');
+  var idxList  = document.getElementById('idxList');
+  var i = 0;
+
+  slides.forEach(function (s, k) {
+    var li = document.createElement('li');
+    li.tabIndex = 0;
+    li.innerHTML = '<span class="n">' + String(k + 1).padStart(2, '0') + '</span>' +
+                   '<span>' + (s.dataset.title || '') + '</span>';
+    li.addEventListener('click', function () { go(k); closeIdx(); });
+    li.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(k); closeIdx(); }
+    });
+    idxList.appendChild(li);
+  });
+  var idxItems = Array.prototype.slice.call(idxList.children);
+
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+    idxItems.forEach(function (li, k) { li.classList.toggle('on', k === i); });
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+  }
+  function closeIdx() { idx.classList.remove('is-open'); }
+
+  document.getElementById('prev').addEventListener('click', function () { go(i - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(i + 1); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'PageDown': case ' ': e.preventDefault(); go(i + 1); break;
+      case 'ArrowLeft':  case 'PageUp':            e.preventDefault(); go(i - 1); break;
+      case 'Home':  e.preventDefault(); go(0); break;
+      case 'End':   e.preventDefault(); go(slides.length - 1); break;
+      case 'Escape':
+        e.preventDefault();
+        idx.classList.toggle('is-open');
+        break;
+    }
+  });
+
+  var start = parseInt((location.hash || '').slice(1), 10);
+  go(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+
+
+<div class="notes" id="notes">
+  <div class="notes-bar">
+    <span class="lbl" id="notesToggle" title="Collapse / expand tray">Speaker notes <span class="build">VN-3a4f5956</span></span>
+    <span class="hintline" id="notesHint"><kbd>N</kbd> toggle tray · <kbd>E</kbd> edit</span>
+    <button id="notesEdit" type="button" title="Edit note (E)">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.2 1.8l3 3L5.4 13.6 1.6 14.4l.8-3.8z"/></svg>
+      Edit
+    </button>
+    <button id="notesReset" type="button" title="Restore the original note">Reset</button>
+  </div>
+  <div class="notes-body" id="notesBody"></div>
+  <textarea id="notesInput" spellcheck="false" aria-label="Edit speaker note"></textarea>
+</div>
+
+<script>
+(function () {
+  var KEY = 'dab-sentiment-agent-notes-VN-3a4f5956';
+  var DEFAULTS = ["Kính thưa hội đồng. Hôm nay tôi trình bày đề nghị phê duyệt go-live cho pipeline chấm tiêu chí Thái độ ĐTV — tức là bắt tuân thủ trong cuộc gọi thu hồi nợ.\n\nTôi xin đi theo ba bước: bài toán là gì, hiện tại trên live đang giải nó ra sao và yếu ở đâu, rồi bản đề xuất đã đo dưới UAT.\n\nNếu hội đồng chỉ giữ lại một ý, tôi mong đó là ý này: trọng tâm lần này không phải một prompt tốt hơn, mà là chuyển tri thức nghiệp vụ ra khỏi mã nguồn, vào một kho dùng chung do QC quản lý.", "Trước hết là bài toán.\n\nMỗi ngày làm việc có từ 15 đến 30 nghìn cuộc gọi thu hồi nợ được ghi âm. Lưới ô vuông bên trái là lượng đó; mấy ô tô đậm là phần mà soát thủ công kịp xem. Phần còn lại hoặc do hệ thống chấm, hoặc không ai chấm.\n\nBên phải là lý do bài toán này khó, và tôi lấy nguyên văn hai cặp câu từ chính bộ quy định QC đang dùng.\n\nCặp thứ nhất, điều hướng cuộc gọi. Câu xanh: anh chị bình tĩnh trao đổi được không — QC không bắt lỗi. Câu đỏ: anh có trao đổi lịch sự được không ạ — QC bắt lỗi. Cùng một khung câu, đổi đúng một từ: bình tĩnh thành lịch sự. Chữ ạ ở cuối cũng không gỡ được. Điều hướng khách hàng bình tĩnh thì được, nhưng hỏi khách hàng có lịch sự được không là chất vấn thái độ của họ.\n\nCặp thứ hai, câu kết thúc cuộc gọi. Nếu như anh không trao đổi lịch sự thì em xin phép ngắt máy — không bắt lỗi, vì đó là nêu điều kiện. Nếu mà anh bất lịch sự thì em xin phép ngắt máy — bắt lỗi, vì bất lịch sự là gán nhãn cho con người. Khác nhau đúng một chữ.\n\nTôi đưa hai cặp này lên để hội đồng thấy: không thể giải bài toán bằng từ khoá. Kết luận nằm ở ngữ cảnh.\n\nDải dưới cùng là quy mô bộ quy định: 919 mục do QC biên soạn, trải thành 1.611 biến thể câu, trên 81 nhóm tiêu chí. Xin lưu ý phần loại trừ nhiều hơn phần vi phạm — 904 so với 707. Phần lớn công sức nghiệp vụ là để nói rõ cái gì KHÔNG phải vi phạm.\n\nVà toàn bộ số đó hiện nằm trong gói phần mềm. QC muốn sửa một câu thì phải chờ một lần phát hành.\n\nBa thẻ dưới là chi phí nghiệp vụ: bắt nhầm tốn thời gian soát và làm oan cán bộ; bỏ sót là rủi ro tuân thủ và hoàn toàn im lặng; và sửa quy tắc thì chậm.", "Đây là bản đang chạy trên live, và tôi xin nói chính xác nó là cái gì.\n\nLuồng rất ngắn: hai cổng lọc rẻ tiền, Scanner tìm câu nghi, rồi Verifier kết luận. Không có truy hồi ở bất kỳ đâu. Bản trên live là prompt engineering — 1.611 mục quy định ở trang trước được dán nguyên vào prompt, không lọc gì theo câu đang xét.\n\nBảng bên dưới là ba điểm yếu, và cả ba đều là vấn đề cấu trúc chứ không phải do chưa tinh chỉnh đủ.\n\nMột, tri thức bị pha loãng: hai ba quy tắc thực sự liên quan nằm lẫn giữa hàng trăm quy tắc không liên quan, nên mô hình bắt được câu chữ bề mặt nhưng không áp được phần loại trừ.\n\nHai, sai không quy được về đâu: chỉ có một bước quyết định, nên mỗi lần sửa là sửa cả khối rồi chờ đo lại toàn bộ.\n\nBa, quy tắc đi kèm mã nguồn, nên không theo kịp thực tế ngoài hiện trường.\n\nHai con số bên phải là hệ quả đo được: cứ 5 cuộc báo lên thì 4 cuộc không có gì, và chỉ bắt được 46 phần trăm số vi phạm QC tìm ra.", "Đây là bản đề xuất, và đây là bản đã chạy trong UAT.\n\nKhác biệt cốt lõi nằm ở phần dưới sơ đồ: hai pool truy hồi. Thay vì dán cả bộ quy tắc, hệ thống tra ra vài mục gần nhất với đúng câu đang xét — một pool mẫu vi phạm, một pool mẫu loại trừ, và hai pool được giữ tách riêng để mẫu loại trừ không bị lấn át. Cả hai đều lấy từ kho tri thức ở dưới cùng, tức Postgres với pgvector, và tôi sẽ nói kỹ ở trang sau.\n\nTrên hàng ngang còn ba stage mới: bot check bỏ qua cuộc do máy trả lời, secondary decider rà lại ca đã bị gắn bằng mô hình mạnh hơn và có quyền gỡ, soften diễn giải lại lý do. Hai stage sau là tuỳ chọn, tắt được bằng biến môi trường.\n\nBốn con số dưới cùng là kết quả UAT trên 334 cuộc gọi do QC đối chiếu. Bắt nhầm từ 177 xuống 68. Bỏ sót từ 53 xuống 20. Tỉ lệ báo đúng từ 20 lên 53 phần trăm, và tỉ lệ bắt được từ 46 lên 80 phần trăm.\n\nXin hội đồng lưu ý: cả hai loại sai cùng giảm. Đây không phải đánh đổi loại này lấy loại kia.", "Đây là trang trung tâm của tài liệu.\n\nBên trái là đường nạp dữ liệu. QC biên soạn corpus, bước ingest đọc vào, sinh vector bằng BGE-M3 rồi ghi xuống cơ sở dữ liệu.\n\nKhối giữa là mô hình dữ liệu. Bảng knowledge_info là nhóm quy định. Bảng knowledge_policy là từng mục, và xin chú ý dòng màu: mức độ nặng nhẹ nằm ở đây, trên mục quy định do QC viết, chứ không suy ra trong mã nguồn như trước. Hai bảng vector bên dưới giữ 707 vector mẫu vi phạm và 904 vector mẫu loại trừ, mỗi bảng một chỉ mục HNSW. Xoá một mục thì vector của nó tự xoá theo; còn nhóm thì không xoá được khi vẫn còn mục bên trong — đó là ràng buộc cố ý để không mất dữ liệu.\n\nBên phải là đường chạy thật. Câu đang xét được sinh vector, tìm gần đúng trên cả hai chỉ mục, lấy top-K mỗi bên, thành hai pool đưa vào Decider.\n\nBa khối dưới cùng là ba điểm tôi muốn ghi vào biên bản.\n\nBên trái: QC sửa một mục, nạp lại, có hiệu lực từ lô kế tiếp. Không sửa mã nguồn, không phát hành.\n\nỞ giữa: kiểm tra lúc khởi động. Nếu kho và bộ quy định lệch phiên bản, hoặc kho không truy cập được, hệ thống từ chối chạy. Không có nó thì lỗi sẽ im lặng — hệ thống vẫn chạy, vẫn trả kết quả trông hợp lý, nhưng dựa trên quy định cũ.\n\nBên phải: tôi đã kiểm chứng đổi nền lưu trữ không đổi kết quả. Lấy toàn bộ 1.611 mục làm truy vấn, đối chiếu nền cũ với nền mới, trùng khớp tuyệt đối. Phép đo này không có mô hình ngôn ngữ tham gia nên không có nhiễu."];
+
+  var wrap  = document.getElementById('notes');
+  var body  = document.getElementById('notesBody');
+  var input = document.getElementById('notesInput');
+  var hint  = document.getElementById('notesHint');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+
+  var store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { store = {}; }
+
+  function current() {
+    for (var k = 0; k < slides.length; k++) {
+      if (slides[k].classList.contains('is-active')) return k;
+    }
+    return 0;
+  }
+  function textFor(k) {
+    return (store[k] !== undefined ? store[k] : (DEFAULTS[k] || ''));
+  }
+  function render() {
+    var t = textFor(current());
+    body.textContent = t || '(no note for this slide)';
+    if (!editing) input.value = t;
+  }
+
+  var editing = false;
+  function edit(on) {
+    editing = on;
+    wrap.classList.toggle('is-editing', on);
+    wrap.classList.remove('is-closed');
+    hint.innerHTML = on
+      ? '<kbd>Enter</kbd> save · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <kbd>Esc</kbd> cancel'
+      : '<kbd>N</kbd> toggle tray · <kbd>E</kbd> edit';
+    if (on) { input.value = textFor(current()); input.focus(); }
+    else { input.blur(); render(); }
+  }
+  function save() {
+    store[current()] = input.value;
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    edit(false);
+  }
+
+  document.getElementById('notesEdit').addEventListener('click', function () { edit(!editing); });
+  document.getElementById('notesToggle').addEventListener('click', function () {
+    if (editing) return;
+    wrap.classList.toggle('is-closed');
+  });
+  document.getElementById('notesReset').addEventListener('click', function () {
+    delete store[current()];
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    edit(false);
+  });
+
+  // Enter saves and hands the keyboard back to the deck; Shift+Enter is a
+  // newline. Without this the tray would swallow every arrow key the moment
+  // it took focus, which is the thing the read-only default exists to avoid.
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
+    else if (e.key === 'Escape') { e.preventDefault(); edit(false); }
+    e.stopPropagation();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (editing) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'n' || e.key === 'N') { wrap.classList.toggle('is-closed'); }
+    if (e.key === 'e' || e.key === 'E') { e.preventDefault(); edit(true); }
+  }, true);
+
+  // The deck swaps `.is-active` without firing an event, so watch the class.
+  new MutationObserver(function () { if (!editing) render(); })
+    .observe(document.getElementById('stage'),
+             { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

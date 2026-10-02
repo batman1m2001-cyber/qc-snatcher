@@ -1,0 +1,9 @@
+
+tokenizers>=0.22.2
+# Utilities
+python-dotenv>=1.2.1
+boto3==1.42.81
+paramiko==4.0.0
+databricks-sdk==0.102.0
+databricks-sql-connector==4.2.6
+databricks-sql-connector[pyarrow]

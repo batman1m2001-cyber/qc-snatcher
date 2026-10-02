@@ -1,0 +1,15 @@
+flowchart LR
+    IN([Call]) --> SI[silent] --> KI[kid check]
+    KI --> SCAN["Detector<br/><b>the whole 15-code taxonomy inline</b><br/>✳ Claude 4 Sonnet"]
+    SCAN --> VER["Verifier<br/>only this code's carve-outs<br/><b>can suppress, never add</b><br/>✳ Claude 4 Sonnet"]
+    VER --> OUT([Final verdict])
+    KI -.->|gate exit| EXIT([No violation])
+    VER -.->|no violation| EXIT
+
+    classDef kb  fill:#e2f0f0,stroke:#0a6a6e,stroke-width:2px,color:#08343a
+    classDef new fill:#e6f3ec,stroke:#1a6b47,stroke-width:1.5px,color:#0f3d29
+    classDef bad fill:#fbeceb,stroke:#a5322e,stroke-width:1.5px,color:#5a1c1a
+    classDef ext fill:#fbf2df,stroke:#8d5c07,stroke-width:1.5px,color:#4a3104
+    classDef gem fill:#eaf1fe,stroke:#4285F4,stroke-width:1.6px,color:#123a75
+    classDef cla fill:#fbeee8,stroke:#D97757,stroke-width:1.6px,color:#6b3320
+    class SCAN,VER bad

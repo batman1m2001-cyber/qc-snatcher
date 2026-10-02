@@ -1,0 +1,1600 @@
+{
+  "card_number": {
+    "branches": [
+      {
+        "cases": [
+          [
+            "value",
+            "format"
+          ]
+        ],
+        "default": "exit_verify"
+      }
+    ],
+    "edges": [
+      [
+        "check",
+        "route_1"
+      ],
+      [
+        "format",
+        "verify"
+      ],
+      [
+        "gated",
+        "mapping_result"
+      ],
+      [
+        "route_1",
+        "exit_verify"
+      ],
+      [
+        "route_1",
+        "format"
+      ],
+      [
+        "verify",
+        "verify_parsed"
+      ],
+      [
+        "verify_parsed",
+        "gated"
+      ]
+    ],
+    "entries": [
+      "check"
+    ],
+    "exits": [
+      "exit_verify",
+      "mapping_result"
+    ],
+    "ops": {
+      "check": "code",
+      "exit_verify": "code",
+      "format": "code",
+      "gated": "code",
+      "mapping_result": "code",
+      "route_1": "branch",
+      "verify": "llm",
+      "verify_parsed": "code"
+    }
+  },
+  "disclosure": {
+    "branches": [
+      {
+        "cases": [
+          [
+            "disclosed",
+            "direct"
+          ]
+        ],
+        "default": "no_disclosure_exit"
+      },
+      {
+        "cases": [
+          [
+            "is_chinh_chu",
+            "chinh_chu_exit"
+          ]
+        ],
+        "default": "disclosure"
+      },
+      {
+        "cases": [
+          [
+            "verified",
+            "direct_exit"
+          ]
+        ],
+        "default": "implicit"
+      },
+      {
+        "cases": [
+          [
+            "verified",
+            "implicit_exit"
+          ]
+        ],
+        "default": "violation_raw"
+      }
+    ],
+    "edges": [
+      [
+        "direct",
+        "direct_parsed"
+      ],
+      [
+        "direct_parsed",
+        "route_3"
+      ],
+      [
+        "disclosure",
+        "disclosure_parsed"
+      ],
+      [
+        "disclosure_parsed",
+        "route_2"
+      ],
+      [
+        "format",
+        "route_1"
+      ],
+      [
+        "implicit",
+        "implicit_parsed"
+      ],
+      [
+        "implicit_parsed",
+        "route_4"
+      ],
+      [
+        "route_1",
+        "chinh_chu_exit"
+      ],
+      [
+        "route_1",
+        "disclosure"
+      ],
+      [
+        "route_2",
+        "direct"
+      ],
+      [
+        "route_2",
+        "no_disclosure_exit"
+      ],
+      [
+        "route_3",
+        "direct_exit"
+      ],
+      [
+        "route_3",
+        "implicit"
+      ],
+      [
+        "route_4",
+        "implicit_exit"
+      ],
+      [
+        "route_4",
+        "violation_raw"
+      ],
+      [
+        "violation_raw",
+        "violation_exit"
+      ]
+    ],
+    "entries": [
+      "format"
+    ],
+    "exits": [
+      "chinh_chu_exit",
+      "direct_exit",
+      "implicit_exit",
+      "no_disclosure_exit",
+      "violation_exit"
+    ],
+    "ops": {
+      "chinh_chu_exit": "code",
+      "direct": "llm",
+      "direct_exit": "code",
+      "direct_parsed": "code",
+      "disclosure": "llm",
+      "disclosure_parsed": "code",
+      "format": "code",
+      "implicit": "llm",
+      "implicit_exit": "code",
+      "implicit_parsed": "code",
+      "no_disclosure_exit": "code",
+      "route_1": "branch",
+      "route_2": "branch",
+      "route_3": "branch",
+      "route_4": "branch",
+      "violation_exit": "code",
+      "violation_raw": "code"
+    }
+  },
+  "hangup": {
+    "branches": [
+      {
+        "cases": [
+          [
+            "call_code == 'Ngat_may'",
+            "flags"
+          ]
+        ],
+        "default": "exit_code"
+      },
+      {
+        "cases": [
+          [
+            "agent_no_response",
+            "exit_silent"
+          ],
+          [
+            "closed_by != 'AGENT'",
+            "exit_customer"
+          ],
+          [
+            "customer_bot_only",
+            "exit_no_real"
+          ],
+          [
+            "customer_empty",
+            "silent"
+          ],
+          [
+            "customer_silent",
+            "silent"
+          ],
+          [
+            "mutual_silence",
+            "exit_no_real"
+          ]
+        ],
+        "default": "intentional"
+      },
+      {
+        "cases": [
+          [
+            "is_bot",
+            "bot_exit"
+          ]
+        ],
+        "default": "silent_check"
+      },
+      {
+        "cases": [
+          [
+            "is_bot",
+            "bot_exit"
+          ]
+        ],
+        "default": "verify"
+      },
+      {
+        "cases": [
+          [
+            "is_implicit_silent",
+            "silent_exit"
+          ]
+        ],
+        "default": "verify"
+      }
+    ],
+    "edges": [
+      [
+        "bot",
+        "bot_parsed"
+      ],
+      [
+        "bot",
+        "bot_parsed"
+      ],
+      [
+        "bot_parsed",
+        "route_1"
+      ],
+      [
+        "bot_parsed",
+        "route_1"
+      ],
+      [
+        "flags",
+        "route_2"
+      ],
+      [
+        "format",
+        "route_1"
+      ],
+      [
+        "route_1",
+        "bot_exit"
+      ],
+      [
+        "route_1",
+        "bot_exit"
+      ],
+      [
+        "route_1",
+        "exit_code"
+      ],
+      [
+        "route_1",
+        "flags"
+      ],
+      [
+        "route_1",
+        "silent_check"
+      ],
+      [
+        "route_1",
+        "verify"
+      ],
+      [
+        "route_2",
+        "exit_customer"
+      ],
+      [
+        "route_2",
+        "exit_no_real"
+      ],
+      [
+        "route_2",
+        "exit_silent"
+      ],
+      [
+        "route_2",
+        "intentional"
+      ],
+      [
+        "route_2",
+        "silent"
+      ],
+      [
+        "route_2",
+        "silent_exit"
+      ],
+      [
+        "route_2",
+        "verify"
+      ],
+      [
+        "silent_check",
+        "silent_check_parsed"
+      ],
+      [
+        "silent_check_parsed",
+        "route_2"
+      ],
+      [
+        "verify",
+        "verify_parsed"
+      ],
+      [
+        "verify",
+        "verify_parsed"
+      ],
+      [
+        "verify_parsed",
+        "mapping"
+      ],
+      [
+        "verify_parsed",
+        "mapping"
+      ]
+    ],
+    "entries": [
+      "format"
+    ],
+    "exits": [
+      "exit_code",
+      "exit_customer",
+      "exit_no_real",
+      "exit_silent",
+      "intentional",
+      "silent"
+    ],
+    "ops": {
+      "bot": "llm",
+      "bot_exit": "code",
+      "bot_parsed": "code",
+      "exit_code": "code",
+      "exit_customer": "code",
+      "exit_no_real": "code",
+      "exit_silent": "code",
+      "flags": "code",
+      "format": "code",
+      "intentional": "graph",
+      "mapping": "code",
+      "route_1": "branch",
+      "route_2": "branch",
+      "silent": "graph",
+      "silent_check": "llm",
+      "silent_check_parsed": "code",
+      "silent_exit": "code",
+      "verify": "llm",
+      "verify_parsed": "code"
+    }
+  },
+  "phone_source": {
+    "branches": [
+      {
+        "cases": [
+          [
+            "call_code == 'Ben_thu_3_DVKD'",
+            "exit_code"
+          ]
+        ],
+        "default": "check"
+      },
+      {
+        "cases": [
+          [
+            "value",
+            "verify"
+          ]
+        ],
+        "default": "exit_kw"
+      }
+    ],
+    "edges": [
+      [
+        "check",
+        "route_2"
+      ],
+      [
+        "format",
+        "route_1"
+      ],
+      [
+        "route_1",
+        "check"
+      ],
+      [
+        "route_1",
+        "exit_code"
+      ],
+      [
+        "route_2",
+        "exit_kw"
+      ],
+      [
+        "route_2",
+        "verify"
+      ],
+      [
+        "verify",
+        "verify_parsed"
+      ],
+      [
+        "verify_parsed",
+        "mapping"
+      ]
+    ],
+    "entries": [
+      "format"
+    ],
+    "exits": [
+      "exit_code",
+      "exit_kw",
+      "mapping"
+    ],
+    "ops": {
+      "check": "code",
+      "exit_code": "code",
+      "exit_kw": "code",
+      "format": "code",
+      "mapping": "code",
+      "route_1": "branch",
+      "route_2": "branch",
+      "verify": "llm",
+      "verify_parsed": "code"
+    }
+  },
+  "raba": {
+    "branches": [
+      {
+        "cases": [
+          [
+            "call_code == 'Ben_thu_3_hua_tra'",
+            "third"
+          ],
+          [
+            "call_code == 'Hua_tra'",
+            "first"
+          ],
+          [
+            "queue_id == 583",
+            "queue_exit"
+          ]
+        ],
+        "default": "exit_code"
+      },
+      {
+        "cases": [
+          [
+            "call_type == 'NO_REMINDER'",
+            "no_reminder"
+          ],
+          [
+            "call_type == 'OVERDUE_REMINDER'",
+            "ovd"
+          ],
+          [
+            "call_type == 'PRE_DUE_REMINDER'",
+            "nyd"
+          ]
+        ],
+        "default": "no_violation"
+      },
+      {
+        "cases": [
+          [
+            "call_type == 'NO_REMINDER'",
+            "no_reminder"
+          ],
+          [
+            "call_type == 'OVERDUE_REMINDER'",
+            "ovd"
+          ],
+          [
+            "call_type == 'PRE_DUE_REMINDER'",
+            "nyd"
+          ]
+        ],
+        "default": "no_violation"
+      },
+      {
+        "cases": [
+          [
+            "identity == 'CUSTOMER'",
+            "customer_exit"
+          ],
+          [
+            "identity == 'THIRD_PARTY'",
+            "third_party"
+          ]
+        ],
+        "default": "unknown_exit"
+      },
+      {
+        "cases": [
+          [
+            "violation",
+            "response"
+          ]
+        ],
+        "default": "no_violation"
+      },
+      {
+        "cases": [
+          [
+            "violation",
+            "response"
+          ]
+        ],
+        "default": "no_violation"
+      },
+      {
+        "cases": [
+          [
+            "violation",
+            "response"
+          ]
+        ],
+        "default": "no_violation"
+      },
+      {
+        "cases": [
+          [
+            "violation",
+            "response"
+          ]
+        ],
+        "default": "no_violation"
+      }
+    ],
+    "edges": [
+      [
+        "agreement",
+        "agreement_parsed"
+      ],
+      [
+        "agreement",
+        "agreement_parsed"
+      ],
+      [
+        "agreement",
+        "agreement_parsed"
+      ],
+      [
+        "agreement",
+        "agreement_parsed"
+      ],
+      [
+        "agreement_parsed",
+        "decision"
+      ],
+      [
+        "agreement_parsed",
+        "decision"
+      ],
+      [
+        "agreement_parsed",
+        "decision"
+      ],
+      [
+        "agreement_parsed",
+        "decision"
+      ],
+      [
+        "classifier",
+        "classifier_parsed"
+      ],
+      [
+        "classifier",
+        "classifier_parsed"
+      ],
+      [
+        "classifier_parsed",
+        "route_1"
+      ],
+      [
+        "classifier_parsed",
+        "route_1"
+      ],
+      [
+        "decision",
+        "route_1"
+      ],
+      [
+        "decision",
+        "route_1"
+      ],
+      [
+        "decision",
+        "route_1"
+      ],
+      [
+        "decision",
+        "route_1"
+      ],
+      [
+        "format",
+        "route_1"
+      ],
+      [
+        "identity",
+        "identity_parsed"
+      ],
+      [
+        "identity_parsed",
+        "route_1"
+      ],
+      [
+        "money",
+        "money_parsed"
+      ],
+      [
+        "money",
+        "money_parsed"
+      ],
+      [
+        "money",
+        "money_parsed"
+      ],
+      [
+        "money",
+        "money_parsed"
+      ],
+      [
+        "money_parsed",
+        "decision"
+      ],
+      [
+        "money_parsed",
+        "decision"
+      ],
+      [
+        "money_parsed",
+        "decision"
+      ],
+      [
+        "money_parsed",
+        "decision"
+      ],
+      [
+        "response",
+        "response_parsed"
+      ],
+      [
+        "response",
+        "response_parsed"
+      ],
+      [
+        "response",
+        "response_parsed"
+      ],
+      [
+        "response",
+        "response_parsed"
+      ],
+      [
+        "response_parsed",
+        "violation_exit"
+      ],
+      [
+        "response_parsed",
+        "violation_exit"
+      ],
+      [
+        "response_parsed",
+        "violation_exit"
+      ],
+      [
+        "response_parsed",
+        "violation_exit"
+      ],
+      [
+        "route_1",
+        "customer_exit"
+      ],
+      [
+        "route_1",
+        "exit_code"
+      ],
+      [
+        "route_1",
+        "first"
+      ],
+      [
+        "route_1",
+        "no_reminder"
+      ],
+      [
+        "route_1",
+        "no_reminder"
+      ],
+      [
+        "route_1",
+        "no_violation"
+      ],
+      [
+        "route_1",
+        "no_violation"
+      ],
+      [
+        "route_1",
+        "no_violation"
+      ],
+      [
+        "route_1",
+        "no_violation"
+      ],
+      [
+        "route_1",
+        "no_violation"
+      ],
+      [
+        "route_1",
+        "no_violation"
+      ],
+      [
+        "route_1",
+        "nyd"
+      ],
+      [
+        "route_1",
+        "nyd"
+      ],
+      [
+        "route_1",
+        "ovd"
+      ],
+      [
+        "route_1",
+        "ovd"
+      ],
+      [
+        "route_1",
+        "queue_exit"
+      ],
+      [
+        "route_1",
+        "response"
+      ],
+      [
+        "route_1",
+        "response"
+      ],
+      [
+        "route_1",
+        "response"
+      ],
+      [
+        "route_1",
+        "response"
+      ],
+      [
+        "route_1",
+        "third"
+      ],
+      [
+        "route_1",
+        "third_party"
+      ],
+      [
+        "route_1",
+        "unknown_exit"
+      ],
+      [
+        "time",
+        "time_parsed"
+      ],
+      [
+        "time",
+        "time_parsed"
+      ],
+      [
+        "time",
+        "time_parsed"
+      ],
+      [
+        "time",
+        "time_parsed"
+      ],
+      [
+        "time_parsed",
+        "decision"
+      ],
+      [
+        "time_parsed",
+        "decision"
+      ],
+      [
+        "time_parsed",
+        "decision"
+      ],
+      [
+        "time_parsed",
+        "decision"
+      ]
+    ],
+    "entries": [
+      "format"
+    ],
+    "exits": [
+      "exit_code",
+      "first",
+      "queue_exit",
+      "third"
+    ],
+    "ops": {
+      "agreement": "llm",
+      "agreement_parsed": "code",
+      "classifier": "llm",
+      "classifier_parsed": "code",
+      "customer_exit": "code",
+      "decision": "code",
+      "exit_code": "code",
+      "first": "graph",
+      "format": "code",
+      "identity": "llm",
+      "identity_parsed": "code",
+      "money": "llm",
+      "money_parsed": "code",
+      "no_reminder": "code",
+      "no_violation": "code",
+      "nyd": "graph",
+      "ovd": "graph",
+      "queue_exit": "code",
+      "response": "llm",
+      "response_parsed": "code",
+      "route_1": "branch",
+      "third": "graph",
+      "third_party": "graph",
+      "time": "llm",
+      "time_parsed": "code",
+      "unknown_exit": "code",
+      "violation_exit": "code"
+    }
+  },
+  "sentiment_agent": {
+    "branches": [
+      {
+        "cases": [
+          [
+            "gate == 'block'",
+            "filter_exit"
+          ]
+        ],
+        "default": "bot_check"
+      },
+      {
+        "cases": [
+          [
+            "route == 'disabled_pass'",
+            "disabled_pass"
+          ],
+          [
+            "route == 'kw_clean_pass'",
+            "kw_clean_pass"
+          ],
+          [
+            "route == 'kw_hit_pass'",
+            "kw_hit_pass"
+          ]
+        ],
+        "default": "prep"
+      },
+      {
+        "cases": [
+          [
+            "agent_silent",
+            "quiet"
+          ],
+          [
+            "call_code == 'Ben_thu_3_DVKD'",
+            "exit_code"
+          ],
+          [
+            "call_code == 'Ben_thu_3_DVKD_AF'",
+            "exit_code"
+          ]
+        ],
+        "default": "prefilter"
+      },
+      {
+        "cases": [
+          [
+            "attribution_ok",
+            "needs_verify"
+          ]
+        ],
+        "default": "halu_check_inputs"
+      },
+      {
+        "cases": [
+          [
+            "is_bot",
+            "exit_bot"
+          ]
+        ],
+        "default": "short_gate"
+      },
+      {
+        "cases": [
+          [
+            "is_heavy_kw",
+            "asr_check_inputs"
+          ]
+        ],
+        "default": "retrieval_query"
+      },
+      {
+        "cases": [
+          [
+            "n_chunks == 0",
+            "no_chunks_pass"
+          ]
+        ],
+        "default": "chunk_scans"
+      },
+      {
+        "cases": [
+          [
+            "n_turns <= 30",
+            "kid_check"
+          ]
+        ],
+        "default": "proceed"
+      },
+      {
+        "cases": [
+          [
+            "needs_soften",
+            "soften_llm"
+          ]
+        ],
+        "default": "apply_soften"
+      },
+      {
+        "cases": [
+          [
+            "needs_verify",
+            "proceed"
+          ]
+        ],
+        "default": "skip_verify"
+      },
+      {
+        "cases": [
+          [
+            "needs_verify",
+            "retrieval"
+          ]
+        ],
+        "default": "apply_primary"
+      },
+      {
+        "cases": [
+          [
+            "value",
+            "decided"
+          ]
+        ],
+        "default": "l2"
+      },
+      {
+        "cases": [
+          [
+            "value",
+            "decided"
+          ]
+        ],
+        "default": "l3"
+      },
+      {
+        "cases": [
+          [
+            "value",
+            "exit_kid"
+          ]
+        ],
+        "default": "proceed"
+      },
+      {
+        "cases": [
+          [
+            "value",
+            "halu_suppress"
+          ]
+        ],
+        "default": "needs_verify"
+      }
+    ],
+    "edges": [
+      [
+        "apply_gate",
+        "route_3"
+      ],
+      [
+        "apply_primary",
+        "soften_gate"
+      ],
+      [
+        "asr_check",
+        "asr_check_parsed"
+      ],
+      [
+        "asr_check_inputs",
+        "asr_check"
+      ],
+      [
+        "asr_check_parsed",
+        "apply_asr_check"
+      ],
+      [
+        "attr_check",
+        "route_1"
+      ],
+      [
+        "batch",
+        "emb"
+      ],
+      [
+        "batch",
+        "emb"
+      ],
+      [
+        "bot_check",
+        "route_4"
+      ],
+      [
+        "carveouts",
+        "merge"
+      ],
+      [
+        "carveouts",
+        "merge"
+      ],
+      [
+        "chunk_scans",
+        "agg"
+      ],
+      [
+        "decided",
+        "l4"
+      ],
+      [
+        "decider",
+        "decider_parsed"
+      ],
+      [
+        "decider_parsed",
+        "apply_decider"
+      ],
+      [
+        "dispatch",
+        "route_1"
+      ],
+      [
+        "docs",
+        "built"
+      ],
+      [
+        "docs",
+        "built"
+      ],
+      [
+        "docs",
+        "built"
+      ],
+      [
+        "docs",
+        "built"
+      ],
+      [
+        "emb",
+        "qvec"
+      ],
+      [
+        "emb",
+        "qvec"
+      ],
+      [
+        "fan",
+        "docs"
+      ],
+      [
+        "fan",
+        "docs"
+      ],
+      [
+        "fan",
+        "docs"
+      ],
+      [
+        "fan",
+        "docs"
+      ],
+      [
+        "fan",
+        "scan"
+      ],
+      [
+        "fmt",
+        "route_2"
+      ],
+      [
+        "halu_check",
+        "halu_check_parsed"
+      ],
+      [
+        "halu_check_inputs",
+        "halu_check"
+      ],
+      [
+        "halu_check_parsed",
+        "is_halu_fn"
+      ],
+      [
+        "hits",
+        "fan"
+      ],
+      [
+        "hits",
+        "fan"
+      ],
+      [
+        "hits",
+        "fan"
+      ],
+      [
+        "hits",
+        "fan"
+      ],
+      [
+        "is_decided",
+        "route_1"
+      ],
+      [
+        "is_decided_2",
+        "route_2"
+      ],
+      [
+        "is_halu_fn",
+        "route_2"
+      ],
+      [
+        "is_kid_fn",
+        "route_5"
+      ],
+      [
+        "kid_check",
+        "kid_check_parsed"
+      ],
+      [
+        "kid_check_parsed",
+        "is_kid_fn"
+      ],
+      [
+        "l1",
+        "is_decided"
+      ],
+      [
+        "l2",
+        "is_decided_2"
+      ],
+      [
+        "l3",
+        "decided"
+      ],
+      [
+        "mapping",
+        "remap"
+      ],
+      [
+        "matcher_inputs",
+        "decider"
+      ],
+      [
+        "needs_verify",
+        "route_3"
+      ],
+      [
+        "pools",
+        "primary_llm"
+      ],
+      [
+        "positives",
+        "merge"
+      ],
+      [
+        "positives",
+        "merge"
+      ],
+      [
+        "prefilter",
+        "apply_gate"
+      ],
+      [
+        "prep",
+        "route_2"
+      ],
+      [
+        "primary_gate",
+        "route_1"
+      ],
+      [
+        "primary_llm",
+        "primary_llm_parsed"
+      ],
+      [
+        "primary_llm_parsed",
+        "apply_primary"
+      ],
+      [
+        "qvec",
+        "carveouts"
+      ],
+      [
+        "qvec",
+        "carveouts"
+      ],
+      [
+        "qvec",
+        "positives"
+      ],
+      [
+        "qvec",
+        "positives"
+      ],
+      [
+        "remap",
+        "attr_check"
+      ],
+      [
+        "retrieval",
+        "matcher_inputs"
+      ],
+      [
+        "retrieval",
+        "pools"
+      ],
+      [
+        "retrieval_query",
+        "retrieval"
+      ],
+      [
+        "route_1",
+        "apply_primary"
+      ],
+      [
+        "route_1",
+        "asr_check_inputs"
+      ],
+      [
+        "route_1",
+        "decided"
+      ],
+      [
+        "route_1",
+        "disabled_pass"
+      ],
+      [
+        "route_1",
+        "halu_check_inputs"
+      ],
+      [
+        "route_1",
+        "kw_clean_pass"
+      ],
+      [
+        "route_1",
+        "kw_hit_pass"
+      ],
+      [
+        "route_1",
+        "l2"
+      ],
+      [
+        "route_1",
+        "needs_verify"
+      ],
+      [
+        "route_1",
+        "prep"
+      ],
+      [
+        "route_1",
+        "retrieval"
+      ],
+      [
+        "route_1",
+        "retrieval_query"
+      ],
+      [
+        "route_2",
+        "apply_soften"
+      ],
+      [
+        "route_2",
+        "chunk_scans"
+      ],
+      [
+        "route_2",
+        "decided"
+      ],
+      [
+        "route_2",
+        "exit_code"
+      ],
+      [
+        "route_2",
+        "halu_suppress"
+      ],
+      [
+        "route_2",
+        "l3"
+      ],
+      [
+        "route_2",
+        "needs_verify"
+      ],
+      [
+        "route_2",
+        "no_chunks_pass"
+      ],
+      [
+        "route_2",
+        "prefilter"
+      ],
+      [
+        "route_2",
+        "quiet"
+      ],
+      [
+        "route_2",
+        "soften_llm"
+      ],
+      [
+        "route_3",
+        "bot_check"
+      ],
+      [
+        "route_3",
+        "filter_exit"
+      ],
+      [
+        "route_3",
+        "proceed"
+      ],
+      [
+        "route_3",
+        "skip_verify"
+      ],
+      [
+        "route_4",
+        "exit_bot"
+      ],
+      [
+        "route_4",
+        "short_gate"
+      ],
+      [
+        "route_5",
+        "exit_kid"
+      ],
+      [
+        "route_5",
+        "proceed"
+      ],
+      [
+        "route_check",
+        "route_1"
+      ],
+      [
+        "scan",
+        "scan_parsed"
+      ],
+      [
+        "scanner",
+        "scanner_parsed"
+      ],
+      [
+        "scanner_parsed",
+        "mapping"
+      ],
+      [
+        "short_gate",
+        "kid_check"
+      ],
+      [
+        "short_gate",
+        "proceed"
+      ],
+      [
+        "soften_gate",
+        "route_2"
+      ],
+      [
+        "soften_llm",
+        "apply_soften"
+      ],
+      [
+        "wide",
+        "hits"
+      ],
+      [
+        "wide",
+        "hits"
+      ],
+      [
+        "wide",
+        "hits"
+      ],
+      [
+        "wide",
+        "hits"
+      ]
+    ],
+    "entries": [
+      "l1"
+    ],
+    "exits": [
+      "l4"
+    ],
+    "ops": {
+      "agg": "code",
+      "apply_asr_check": "code",
+      "apply_decider": "code",
+      "apply_gate": "code",
+      "apply_primary": "code",
+      "apply_soften": "code",
+      "asr_check": "llm",
+      "asr_check_inputs": "code",
+      "asr_check_parsed": "code",
+      "attr_check": "code",
+      "batch": "code",
+      "bot_check": "code",
+      "built": "code",
+      "carveouts": "graph",
+      "chunk_scans": "graph",
+      "decided": "code",
+      "decider": "llm",
+      "decider_parsed": "code",
+      "disabled_pass": "code",
+      "dispatch": "code",
+      "docs": "doc-fetch",
+      "emb": "embedding",
+      "exit_bot": "code",
+      "exit_code": "code",
+      "exit_kid": "code",
+      "fan": "code",
+      "filter_exit": "code",
+      "fmt": "code",
+      "halu_check": "llm",
+      "halu_check_inputs": "code",
+      "halu_check_parsed": "code",
+      "halu_suppress": "code",
+      "hits": "vector-search",
+      "is_decided": "code",
+      "is_decided_2": "code",
+      "is_halu_fn": "code",
+      "is_kid_fn": "code",
+      "kid_check": "llm",
+      "kid_check_parsed": "code",
+      "kw_clean_pass": "code",
+      "kw_hit_pass": "code",
+      "l1": "graph",
+      "l2": "graph",
+      "l3": "graph",
+      "l4": "graph",
+      "mapping": "code",
+      "matcher_inputs": "code",
+      "merge": "code",
+      "needs_verify": "code",
+      "no_chunks_pass": "code",
+      "pools": "code",
+      "positives": "graph",
+      "prefilter": "graph",
+      "prep": "code",
+      "primary_gate": "code",
+      "primary_llm": "llm",
+      "primary_llm_parsed": "code",
+      "proceed": "code",
+      "quiet": "code",
+      "qvec": "code",
+      "remap": "code",
+      "retrieval": "graph",
+      "retrieval_query": "code",
+      "route_1": "branch",
+      "route_2": "branch",
+      "route_3": "branch",
+      "route_4": "branch",
+      "route_5": "branch",
+      "route_check": "code",
+      "scan": "llm",
+      "scan_parsed": "code",
+      "scanner": "llm",
+      "scanner_parsed": "code",
+      "short_gate": "branch",
+      "skip_verify": "code",
+      "soften_gate": "code",
+      "soften_llm": "llm",
+      "wide": "code"
+    }
+  },
+  "sentiment_customer": {
+    "branches": [
+      {
+        "cases": [
+          [
+            "customer_silent",
+            "quiet"
+          ]
+        ],
+        "default": "verify"
+      }
+    ],
+    "edges": [
+      [
+        "fmt",
+        "route_1"
+      ],
+      [
+        "route_1",
+        "quiet"
+      ],
+      [
+        "route_1",
+        "verify"
+      ],
+      [
+        "verify",
+        "verify_parsed"
+      ],
+      [
+        "verify_parsed",
+        "mapping"
+      ]
+    ],
+    "entries": [
+      "fmt"
+    ],
+    "exits": [
+      "mapping",
+      "quiet"
+    ],
+    "ops": {
+      "fmt": "code",
+      "mapping": "code",
+      "quiet": "code",
+      "route_1": "branch",
+      "verify": "llm",
+      "verify_parsed": "code"
+    }
+  }
+}

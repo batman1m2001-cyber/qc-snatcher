@@ -1,0 +1,88 @@
+Bạn xác minh lại 1 cụm AGENT chứa từ nặng (mày / tao / con nợ / thô tục)
+— nguy cơ ASR nhầm từ vô hại.
+
+Nhiệm vụ: xét giọng điệu 2-3 lượt xung quanh có khớp mạch leo thang không.
+
+ĐẦU VÀO:
+- từ khoá / bằng chứng: từ nặng bị flag + lượt AGENT chứa nó
+- ngữ cảnh: cửa sổ turns quanh lượt bắt vi phạm. Turn có ` <<<` cuối
+  dòng là vị trí bộ phát hiện bắt vi phạm; các turn khác là bối cảnh.
+  Các block cách nhau bằng `...` là 2 đoạn xa nhau trong cùng cuộc gọi.
+
+HUỶ khi giọng xung quanh lịch sự nghiệp vụ ("dạ / ạ / phiền / giúp em"),
+từ nặng đứng lẻ loi, không có leo thang trước đó. HOẶC lượt `<<<` là
+mảnh câu vô nghĩa/không có subject-verb rõ, VÀ AGENT turn liền sau
+quay lại giọng nghiệp vụ (hỏi thông tin / xác minh) → dấu hiệu ASR
+bleed (giọng nền lọt mic AGENT, echo channel, lặp lời KH…) chứ không
+phải AGENT leo thang.
+
+HUỶ khi lượt `<<<` là AGENT NHẮC LẠI LỜI KH có chứa từ vi phạm: KH vừa
+dùng "mày/tao/lừa đảo/..." ở turn trước, AGENT lặp lại nguyên văn hoặc
+gần nguyên văn cụm đó để phản hồi ("sao lại mày tao hả anh", "em có
+lừa đảo gì đâu"). Đây là quote lại lời KH, không phải AGENT gán KH.
+Kiểm tra CUSTOMER turn ngay trước có dùng từ đó không; nếu có → huỷ.
+
+HUỶ khi lượt `<<<` là TURN CHÀO / MỞ ĐẦU cuộc gọi có `alo/xin chào` +
+polite marker cuối câu (`đúng không ạ`, `đó ạ`, `phải không ạ`, `nghe rõ
+không ạ`) — `mày/tao` gần như chắc chắn là ASR nhầm từ `này/máy/nghe
+máy`. VD `alo phải anh X nghe mày đúng không ạ` = `nghe máy đúng không
+ạ`; `chị nhỏ như mày đúng không ạ` = `như này đúng không ạ`. Turn có
+`đúng không ạ` + tên riêng + `mày` = ASR chắc chắn → HUỶ.
+
+HUỶ khi có CLUSTER FRAGMENT: nhiều AGENT turn liên tiếp cách nhau chỉ
+bởi CUSTOMER monologue (không có logical response), mỗi AGENT turn <10
+từ, chứa `mày/tao/chúng mày` không đủ subject-verb rõ (VD `sao chúng
+mày lại`, `hay như thế này tao`), VÀ KH monologue tiếp tục không bị
+gián đoạn qua các AGENT turn đó → dấu hiệu channel bleed / background
+side chatter, không phải AGENT thực sự nói với KH.
+
+GIỮ khi có leo thang rõ: KH khiêu khích trước, AGENT lặp lại VÀ tiếp
+tục giọng đối đầu ở các turn sau (không quay lại giọng nghiệp vụ ngay).
+
+Mặc định HUỶ khi có 2+ dấu hiệu ASR/fragment/polite frame; chỉ GIỮ khi
+context leo thang rõ ràng.
+
+Ví dụ HUỶ:
+[10] AGENT: dạ em nhờ anh xác nhận số điện thoại giúp em ạ
+[x]  CUSTOMER: được
+[12] AGENT: alo mày có nghe rõ không anh    <<<
+→ huỷ: giọng quanh cực lịch sự, "mày" lệch mạch, không leo thang.
+
+Ví dụ HUỶ (opening greeting ASR):
+[1] AGENT: anh mạnh tuyền nghe mày đúng không ạ    <<<
+[2] CUSTOMER: à vâng
+→ huỷ: turn chào có tên riêng + `đúng không ạ` polite frame, `nghe mày`
+  = ASR `nghe máy`.
+
+Ví dụ HUỶ (cluster fragment / background bleed):
+[87] CUSTOMER: chị không có một khoản mà chị phải mua mức lương chị mà chị
+     đầu chị thì chỉ xin mua hồ cho chị mỗi tháng một chị trả không được
+[88] AGENT: con yêu hả anh không yêu cái gì anh có thể yêu
+[89] CUSTOMER: chứ đâu khoảng tháng chỉ là năm triệu ba
+[90] AGENT: sao chúng mày lại    <<<
+[91] CUSTOMER: cái chị ngấm mặng của làm cũng được á thì ra mỗi tháng chị
+     chỉ trả một triệu rưỡi
+[92] AGENT: chúng mày đông chúng mày nghĩ sao đối tượng
+→ huỷ: KH monologue liên tục, AGENT turn <10 từ, không logical response,
+  không có escalation flow → channel bleed/side chatter.
+
+Ví dụ GIỮ:
+[10] CUSTOMER: tao đã bảo không có tiền
+[11] AGENT: anh trao đổi lịch sự lại giúp em
+[12] CUSTOMER: mày làm gì được tao
+[13] AGENT: mày mà nói kiểu đó thì tao cúp máy    <<<
+→ giữ: leo thang rõ, AGENT lặp giọng đối đầu.
+
+Trả về đúng định dạng JSON (KHÔNG bọc trong ```json``` hay markdown, JSON thuần):
+
+{{
+  "result": {{
+    "keep": true|false,
+    "reason": "1 câu mô tả giọng xung quanh có / không khớp cụm bằng chứng"
+  }}
+}}
+
+từ khoá: {keyword}
+bằng chứng: {evidence}
+ngữ cảnh:
+{context}

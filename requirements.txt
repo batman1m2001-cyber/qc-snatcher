@@ -1,0 +1,10 @@
+# Local install without uv. The image uses
+# deployment/score_sentiment/requirements.txt, not this file.
+#
+# The three hush wheels that stood here are gone: hush was private, so
+# `./wheels/*.whl` was the only way to install it. operonx is on PyPI.
+operonx[openai,pgvector,triton]==1.11.0
+
+# Utilities
+python-dotenv==1.2.1
+openpyxl>=3.1.5

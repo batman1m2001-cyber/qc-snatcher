@@ -1,0 +1,11 @@
+row	issue	id	original	converted	fragments
+22	SLASH FRAGMENT	CVO-452	“Ừ/Vầng, ai cũng có lý do mà.” - Chỉ vi phạm nếu CB mỉa mai KH	Ừ | Vầng, ai cũng có lý do mà.” - Chỉ vi phạm nếu CB mỉa mai KH	Ừ
+24	SLASH FRAGMENT	POS-541	“Em/ngân hàng/Tôi nói cho mà nghe”	Em | ngân hàng | Tôi nói cho mà nghe	Em; ngân hàng
+37	SLASH FRAGMENT	POS-550	“AC trao đổi lịch sự được không/"AC trao đổi cho nó lịch sự vào/đi" /AC bất lịch sự/Anh chị thiếu lịch sự/trao đổi bất lịch sự thì em xin phép ngắt máy trước an	AC trao đổi lịch sự được không | AC trao đổi cho nó lịch sự vào | đi | AC bất lịch sự | Anh chị thiếu lịch sự | trao đổi bất lịch sự thì em xin phép ngắt máy tr	đi
+59	SLASH FRAGMENT	POS-130	suy nghĩ đi chứ/anh phải biết nghĩ chứ"/"nghĩ/cân nhắc cho kỹ vào	suy nghĩ đi chứ | anh phải biết nghĩ chứ | nghĩ | cân nhắc cho kỹ vào	nghĩ
+84	SLASH FRAGMENT	POS-580	“AC đừng la làng/ầm ĩ/quát tháo/la hét"	AC đừng la làng | ầm ĩ | quát tháo | la hét	ầm ĩ
+119	SLASH FRAGMENT	POS-601	“AC không đủ nhận thức để biết/hiểu”	AC không đủ nhận thức để biết | hiểu	hiểu
+128	SLASH FRAGMENT	POS-607	“AC không đủ kiến thức”/“AC không đủ nhận thức để biết/hiểu”/"Có hiểu rõ thì hẵng nói"	AC không đủ kiến thức | AC không đủ nhận thức để biết | hiểu | Có hiểu rõ thì hẵng nói	hiểu
+310	SLASH FRAGMENT	POS-365	chị đừng có trao đổi như vậy chị ạ | anh đừng có trao đổi kiểu này | chị đừng có nói như vậy anh ạ | anh chị đừng có + [V] như vậy + [chị ạ/anh nhá/cơ ạ]	chị đừng có trao đổi như vậy chị ạ | anh đừng có trao đổi kiểu này | chị đừng có nói như vậy anh ạ | anh chị đừng có + [V] như vậy + [chị ạ | anh nhá | cơ ạ]	cơ ạ]
+342	SLASH FRAGMENT	POS-395	cô là mẹ anh hoàng thì cô phải nắm rõ được thông tin chứ ạ tại sao ngân hàng hỏi cô cứ hình như như vậy hả cô | anh chị là [quan hệ] thì phải nắm rõ thông tin c	cô là mẹ anh hoàng thì cô phải nắm rõ được thông tin chứ ạ tại sao ngân hàng hỏi cô cứ hình như như vậy hả cô | anh chị là [quan hệ] thì phải nắm rõ thông tin c	mẹ; vợ
+407	UNKNOWN SEVERITY	Cần xét dựa trên bối cảnh	ôi trời ơi	

@@ -1,0 +1,24 @@
+Xác định xem cuộc gọi này có phải là **trường hợp KH im lặng ngầm (implicit silent)** hay không.
+
+**Trường hợp implicit silent là khi:**
+1. KH có vẻ như phản hồi, nhưng **chỉ là các tiếng ngắn** như "ừ", "ờ", "dạ", "mà", "à" - đây thường là **nhiễu voice-to-text bắt nhầm** hoặc KH không thực sự tham gia cuộc gọi.
+2. Agent đã nhận ra KH không phản hồi thực sự và phản hồi theo **template xử lý im lặng**.
+
+**Dấu hiệu nhận biết:**
+- Phản hồi của KH chỉ gồm các từ ngắn lặp lại: "ừ", "ờ", "dạ", "mà", "à", "ừm"
+- Agent nói các câu template như:
+  - "hiện tại bên em không nghe thấy phản hồi từ bên anh/chị"
+  - "nếu không có phản hồi gì em xin phép ngắt máy"
+  - "nhờ anh/chị chủ động nghe máy hoặc gọi lại"
+  - "ngân hàng gọi điện lại cho anh/chị"
+
+**KHÔNG phải implicit silent nếu:**
+- KH có phản hồi thực sự với nội dung rõ ràng (hỏi, trả lời, yêu cầu...)
+- Agent không nói template xử lý im lặng
+
+Trả về định dạng XML:
+<is_implicit_silent>true/false</is_implicit_silent>
+<reason>Lý do ngắn gọn</reason>
+
+Đây là nội dung cuộc gọi:
+{transcript}

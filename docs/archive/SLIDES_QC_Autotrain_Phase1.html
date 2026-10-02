@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Autotrain AI QC — Phase 1</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — light is the base; dark redefines tokens only.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --paper:    #f2f5f5;
+  --surface:  #ffffff;
+  --sunken:   #eaefef;
+  --line:     #d3dbdb;
+  --line-soft:#e4eaea;
+  --ink:      #0f1717;
+  --ink-2:    #33403f;
+  --muted:    #5d6c6c;
+  --accent:   #0a6a6e;
+  --accent-w: #e2f0f0;
+  --flag:     #a5322e;
+  --flag-w:   #fbeceb;
+  --ok:       #1a6b47;
+  --ok-w:     #e6f3ec;
+  --warn:     #8d5c07;
+  --warn-w:   #fbf2df;
+  --shadow:   0 1px 2px rgba(15,23,23,.06), 0 8px 24px rgba(15,23,23,.05);
+
+  --f-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --f-mono: Consolas, "Cascadia Mono", "SF Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:    #0b1111;
+    --surface:  #131c1c;
+    --sunken:   #0f1717;
+    --line:     #263131;
+    --line-soft:#1d2727;
+    --ink:      #e7eeed;
+    --ink-2:    #c2cfce;
+    --muted:    #8fa1a0;
+    --accent:   #4cbcc0;
+    --accent-w: #102a2b;
+    --flag:     #e8817c;
+    --flag-w:   #2c1817;
+    --ok:       #55bd8b;
+    --ok-w:     #12261e;
+    --warn:     #dca944;
+    --warn-w:   #2a2213;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:    #0b1111;
+  --surface:  #131c1c;
+  --sunken:   #0f1717;
+  --line:     #263131;
+  --line-soft:#1d2727;
+  --ink:      #e7eeed;
+  --ink-2:    #c2cfce;
+  --muted:    #8fa1a0;
+  --accent:   #4cbcc0;
+  --accent-w: #102a2b;
+  --flag:     #e8817c;
+  --flag-w:   #2c1817;
+  --ok:       #55bd8b;
+  --ok-w:     #12261e;
+  --warn:     #dca944;
+  --warn-w:   #2a2213;
+  --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── stage ────────────────────────────────────────────────── */
+.deck {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2vmin;
+}
+.stage {
+  position: relative;
+  width: min(100%, 172vh);
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  container-type: size;
+  container-name: stage;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 4.2cqw 5cqw 4.6cqw;
+  font-size: 1.55cqw;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.slide.is-active { display: flex; }
+
+/* ── rail ─────────────────────────────────────────────────── */
+.rail {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2cqw;
+  padding-bottom: 1.1cqw;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 2.4cqw;
+  flex: none;
+}
+.eyebrow {
+  font-size: 1.05cqw;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rail .num {
+  font-family: var(--f-mono);
+  font-size: 1.05cqw;
+  letter-spacing: .08em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── type ─────────────────────────────────────────────────── */
+h1, h2, h3 { margin: 0; text-wrap: balance; color: var(--ink); }
+h1 { font-size: 5.2cqw; font-weight: 700; letter-spacing: -.02em; line-height: 1.04; }
+h2 { font-size: 3.05cqw; font-weight: 700; letter-spacing: -.014em; line-height: 1.14; }
+h3 { font-size: 1.65cqw; font-weight: 700; letter-spacing: -.004em; }
+.lede {
+  font-size: 1.95cqw;
+  line-height: 1.42;
+  color: var(--muted);
+  max-width: 62ch;
+  margin: 1.1cqw 0 0;
+}
+.body { margin: 0; }
+.small { font-size: 1.25cqw; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: .93em; letter-spacing: -.01em; }
+strong { color: var(--ink); font-weight: 700; }
+em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+.stack { display: flex; flex-direction: column; gap: 2cqw; flex: 1 1 auto; min-height: 0; }
+.stack-tight { display: flex; flex-direction: column; gap: 1.2cqw; }
+.spacer { flex: 1 1 auto; }
+
+/* ── title slide ──────────────────────────────────────────── */
+.title-slide { justify-content: center; padding-left: 6cqw; padding-right: 6cqw; }
+.title-mark {
+  width: 7cqw; height: .42cqw;
+  background: var(--accent);
+  border-radius: 99px;
+  margin-bottom: 2.6cqw;
+}
+.title-meta {
+  display: flex; flex-wrap: wrap; gap: .8cqw 2.4cqw;
+  font-size: 1.3cqw; color: var(--muted);
+  margin-top: 3cqw; padding-top: 1.6cqw;
+  border-top: 1px solid var(--line-soft);
+}
+.title-meta b { color: var(--ink); font-weight: 600; }
+.qlist { display: flex; flex-direction: column; gap: .7cqw; margin-top: 2.6cqw; }
+.qlist div { display: flex; gap: 1cqw; font-size: 1.5cqw; }
+.qlist span {
+  font-family: var(--f-mono); color: var(--accent); font-weight: 700;
+  font-variant-numeric: tabular-nums; flex: none;
+}
+
+/* ── grids ────────────────────────────────────────────────── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2cqw; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+.g2-wide { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2.4cqw; }
+.g2-narrow { display: grid; grid-template-columns: .8fr 1fr; gap: 2.4cqw; }
+
+/* ── card ─────────────────────────────────────────────────── */
+.card {
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  padding: 1.5cqw 1.7cqw;
+  display: flex; flex-direction: column; gap: .6cqw;
+}
+.card h3 { font-size: 1.55cqw; }
+.card p { margin: 0; font-size: 1.4cqw; color: var(--muted); }
+.card.on-flag { background: var(--flag-w); border-color: color-mix(in srgb, var(--flag) 22%, transparent); }
+.card.on-ok   { background: var(--ok-w);   border-color: color-mix(in srgb, var(--ok) 24%, transparent); }
+.card.on-warn { background: var(--warn-w); border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
+.card.on-acc  { background: var(--accent-w); border-color: color-mix(in srgb, var(--accent) 26%, transparent); }
+
+.tag {
+  align-self: flex-start;
+  font-size: 1.02cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: .22cqw .7cqw; border-radius: 3px;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--line);
+}
+.tag.t-flag { color: var(--flag); border-color: color-mix(in srgb, var(--flag) 36%, transparent); }
+.tag.t-ok   { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 38%, transparent); }
+.tag.t-acc  { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.tag.t-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
+
+/* ── flow chain ───────────────────────────────────────────── */
+.flow { display: flex; align-items: stretch; gap: .5cqw; flex-wrap: wrap; }
+.flow > .node {
+  flex: 1 1 0; min-width: 0;
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 1cqw 1.1cqw;
+  font-size: 1.32cqw;
+  display: flex; flex-direction: column; gap: .3cqw;
+}
+.flow > .node b { font-size: 1.32cqw; }
+.flow > .node .who {
+  font-size: 1cqw; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700;
+}
+.flow > .arrow {
+  flex: none; align-self: center;
+  color: var(--line); font-size: 1.6cqw; font-weight: 700;
+}
+.flow.is-cold > .node { background: transparent; border-style: dashed; border-color: var(--line); color: var(--muted); }
+.flow.is-cold > .node b { color: var(--muted); font-weight: 600; }
+
+/* ── tables ───────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 1.32cqw; line-height: 1.38;
+}
+th, td {
+  text-align: left; vertical-align: top;
+  padding: .78cqw .9cqw;
+  border-bottom: 1px solid var(--line-soft);
+}
+th {
+  font-size: 1.05cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td b, th b { color: var(--ink); }
+td.n {
+  font-family: var(--f-mono); color: var(--accent); font-weight: 700;
+  font-variant-numeric: tabular-nums; width: 2.4cqw;
+}
+tr.is-out td { color: var(--muted); }
+tr.is-out td b { color: var(--muted); }
+
+/* ── numbered steps ───────────────────────────────────────── */
+.steps { display: grid; grid-template-columns: repeat(7, 1fr); gap: .7cqw; }
+.step {
+  border-top: .28cqw solid var(--accent);
+  padding-top: .9cqw;
+  display: flex; flex-direction: column; gap: .35cqw;
+}
+.step .k {
+  font-family: var(--f-mono); font-size: 1.05cqw; font-weight: 700;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.step b { font-size: 1.35cqw; }
+.step .who { font-size: 1.02cqw; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.step p { margin: 0; font-size: 1.2cqw; color: var(--muted); }
+.step.is-manual { border-top-color: var(--warn); }
+.step.is-manual .k { color: var(--warn); }
+
+/* ── quote / sample ───────────────────────────────────────── */
+.sample {
+  font-size: 1.5cqw;
+  padding: .75cqw 1cqw;
+  border-left: .28cqw solid var(--line);
+  background: var(--sunken);
+  border-radius: 0 4px 4px 0;
+}
+.sample.pos { border-left-color: var(--flag); }
+.sample.neg { border-left-color: var(--ok); }
+
+/* ── note ─────────────────────────────────────────────────── */
+.note {
+  border-left: .28cqw solid var(--accent);
+  background: var(--accent-w);
+  padding: 1cqw 1.4cqw;
+  border-radius: 0 4px 4px 0;
+  font-size: 1.42cqw;
+}
+.note.n-warn { border-left-color: var(--warn); background: var(--warn-w); }
+.note.n-flag { border-left-color: var(--flag); background: var(--flag-w); }
+
+/* ── stat ─────────────────────────────────────────────────── */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+.stat { display: flex; flex-direction: column; gap: .2cqw; }
+.stat .v {
+  font-size: 3.6cqw; font-weight: 700; letter-spacing: -.03em; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.stat .l { font-size: 1.25cqw; color: var(--muted); }
+.stat.is-acc .v { color: var(--accent); }
+.stat.is-flag .v { color: var(--flag); }
+
+/* ── mock UI ──────────────────────────────────────────────── */
+.mock {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface);
+  display: flex; flex-direction: column;
+}
+.mock-bar {
+  background: var(--sunken);
+  border-bottom: 1px solid var(--line-soft);
+  padding: .7cqw 1cqw;
+  font-size: 1.1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+}
+.mock-body { padding: 1.1cqw; display: flex; flex-direction: column; gap: .6cqw; }
+.mock-input {
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: .8cqw 1cqw;
+  font-size: 1.42cqw;
+  color: var(--ink);
+  background: var(--surface);
+}
+.row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 1cqw;
+  font-size: 1.3cqw;
+  padding: .42cqw 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.row:last-child { border-bottom: none; }
+.row .id { font-family: var(--f-mono); font-size: 1.12cqw; color: var(--muted); flex: none; }
+.row .sc { font-family: var(--f-mono); font-size: 1.12cqw; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.row .txt { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.hit .txt { color: var(--accent); font-weight: 600; }
+
+/* ── field list ───────────────────────────────────────────── */
+.fields { display: flex; flex-direction: column; gap: .55cqw; }
+.field { display: grid; grid-template-columns: 9.5cqw 1fr; gap: 1cqw; font-size: 1.34cqw; align-items: start; }
+.field .fk {
+  font-size: 1.08cqw; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); padding-top: .2cqw;
+}
+
+/* ── navigation chrome ────────────────────────────────────── */
+.progress {
+  position: absolute; top: 0; left: 0; height: .3cqw;
+  background: var(--accent);
+  transition: width .18s ease;
+  z-index: 5;
+}
+.nav {
+  position: fixed; right: 2.4vmin; bottom: 2.4vmin;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 5px 6px 5px 14px;
+  box-shadow: var(--shadow);
+  z-index: 20;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.nav button {
+  font: inherit; font-size: 15px; line-height: 1;
+  width: 30px; height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.nav button:hover { background: var(--sunken); }
+.nav button:focus-visible, .idx li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { position: fixed; left: 2.4vmin; bottom: 2.4vmin; font-size: 12px; color: var(--muted); z-index: 20; }
+.hint kbd {
+  font-family: var(--f-mono); font-size: 11px;
+  border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 3px; padding: 1px 5px; background: var(--surface); color: var(--ink);
+}
+
+.idx {
+  position: fixed; inset: 0; z-index: 30;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  backdrop-filter: blur(6px);
+  display: none;
+  padding: 6vmin 8vmin;
+  overflow: auto;
+}
+.idx.is-open { display: block; }
+.idx h2 { font-size: 20px; margin-bottom: 16px; }
+.idx ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+.idx li {
+  display: flex; gap: 12px; padding: 7px 8px; border-radius: 4px;
+  cursor: pointer; font-size: 14px; color: var(--ink-2);
+  break-inside: avoid;
+}
+.idx li:hover { background: var(--sunken); }
+.idx li .n { font-family: var(--f-mono); color: var(--accent); font-weight: 700; }
+.idx li.on { color: var(--accent); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ── print → one slide per page ───────────────────────────── */
+@page { size: A4 landscape; margin: 0; }
+@media print {
+  .nav, .hint, .idx, .progress { display: none !important; }
+  body { background: #fff; }
+  .deck { display: block; padding: 0; min-height: 0; }
+  .stage {
+    width: 100%; border: none; border-radius: 0; box-shadow: none;
+    aspect-ratio: auto; height: auto; container-type: normal;
+  }
+  .slide {
+    display: flex !important;
+    position: relative; inset: auto;
+    width: 297mm; height: 167mm;
+    padding: 12mm 14mm;
+    font-size: 10.5pt;
+    break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  h1 { font-size: 34pt; } h2 { font-size: 20pt; } h3 { font-size: 11pt; }
+  .lede { font-size: 13pt; } .eyebrow, .rail .num { font-size: 7.5pt; }
+  table { font-size: 9pt; } th { font-size: 7.5pt; }
+  .small, .step p, .card p { font-size: 8.6pt; }
+}
+</style>
+</head>
+<body>
+
+<div class="deck">
+<div class="stage" id="stage">
+<div class="progress" id="progress"></div>
+
+<!-- ═══ 1 ═══════════════════════════════════════════════════ -->
+<section class="slide title-slide" data-title="Trang bìa">
+  <div class="title-mark"></div>
+  <h1>Autotrain AI QC</h1>
+  <p class="lede">Vòng phản hồi từ QC vào tri thức của AI — để QC sửa được AI mà không cần đi qua đội kỹ thuật.</p>
+  <div class="qlist">
+    <div><span>01</span><p class="body">QC báo AI sai như thế nào để hệ thống hiểu và sửa được?</p></div>
+    <div><span>02</span><p class="body">Tri thức của AI nằm ở đâu, ai được sửa, sửa bằng cách nào?</p></div>
+    <div><span>03</span><p class="body">Sửa xong thì làm sao biết AI đã tốt lên thật?</p></div>
+  </div>
+  <div class="title-meta">
+    <span><b>Phase 1</b> · Tài liệu thảo luận</span>
+    <span>QC-BU × EDA × IT</span>
+    <span>Hệ thống: <b>sentiment_agent v4</b></span>
+    <span>14.08.2026</span>
+  </div>
+</section>
+
+<!-- ═══ 2 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Hôm nay sửa một lỗi mất bao lâu">
+  <div class="rail"><span class="eyebrow">Vấn đề</span><span class="num">02 / 17</span></div>
+  <div class="stack">
+    <h2>Hôm nay, sửa một lỗi của AI mất vài ngày</h2>
+
+    <div class="flow is-cold">
+      <div class="node"><span class="who">QC</span><b>Phát hiện AI sai</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">QC → Dev</span><b>Báo qua chat / file</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Dev</span><b>Sửa file tri thức</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Dev</span><b>Deploy bản mới</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">QC</span><b>Chờ, rồi kiểm lại</b></div>
+    </div>
+
+    <div class="g3">
+      <div class="card on-flag">
+        <span class="tag t-flag">Không truy được</span>
+        <h3>QC không biết AI dựa vào đâu</h3>
+        <p>Thấy kết quả sai, nhưng không biết AI đã đọc tri thức nào để ra kết luận đó. Phản hồi vì vậy chỉ dừng ở “AI sai”.</p>
+      </div>
+      <div class="card on-flag">
+        <span class="tag t-flag">Không sửa được</span>
+        <h3>Tri thức nằm trong file kỹ thuật</h3>
+        <p>972 mẫu câu nằm trong một file YAML gồm 82 nhóm, đặt tên theo đợt tinh chỉnh. Chỉ Dev mở và sửa được.</p>
+      </div>
+      <div class="card on-flag">
+        <span class="tag t-flag">Không đo được</span>
+        <h3>Sửa xong không ai dám khẳng định</h3>
+        <p>Không có bộ dữ liệu chuẩn để so trước–sau, nên mỗi lần sửa là một lần tin tưởng chứ không phải một lần kiểm chứng.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 3 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Phase 1 đổi thành gì">
+  <div class="rail"><span class="eyebrow">Vấn đề</span><span class="num">03 / 17</span></div>
+  <div class="stack">
+    <h2>Phase 1: QC viết luật, hệ thống thi hành</h2>
+
+    <div class="flow">
+      <div class="node"><span class="who">QC</span><b>Note lỗi trên UI</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Tự động</span><b>Soạn thẻ tri thức</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">QC Lead</span><b>Duyệt nội dung</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Tự động</span><b>Cổng kiểm định</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">EDA</span><b>Publish theo lô</b></div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Tự động</span><b>Đối soát lại call</b></div>
+    </div>
+
+    <div class="g2">
+      <div class="card on-ok">
+        <span class="tag t-ok">Đổi vai</span>
+        <h3>Đội kỹ thuật ra khỏi đường đi của tri thức</h3>
+        <p>EDA không còn là người dịch ý QC thành luật. Vai trò chuyển thành người giữ cổng chất lượng: dựng bộ kiểm định, chạy đánh giá, publish. Nội dung tri thức thuộc về QC.</p>
+      </div>
+      <div class="card">
+        <h3>Cái gì <em>không</em> đổi</h3>
+        <p>AI vẫn chạy đúng luồng hiện tại. Phase 1 không đụng vào pipeline chấm điểm — chỉ đổi cách tri thức được tạo ra, được duyệt, và được đưa vào.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 4 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="AI đã ghi lại nó dựa vào đâu">
+  <div class="rail"><span class="eyebrow">Cơ chế</span><span class="num">04 / 17</span></div>
+  <div class="stack">
+    <h2>Điều làm cho vòng lặp này khả thi: AI đã ghi lại nó dựa vào đâu</h2>
+    <p class="lede">Mỗi cuộc gọi được chấm đều lưu lại đúng bộ mẫu mà AI đã đọc trước khi ra quyết định.</p>
+
+    <div class="flow">
+      <div class="node"><span class="who">Bước 1</span><b>Quét</b>Tìm câu nghi vi phạm trong bản ghi</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Bước 2</span><b>Truy xuất</b>Lấy 10 mẫu vi phạm + 10 mẫu ngoại lệ gần nghĩa nhất</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Bước 3</span><b>Quyết định</b>Đọc bằng chứng + ngữ cảnh + 20 mẫu → kết luận, kèm mẫu đã trích dẫn</div>
+      <span class="arrow">→</span>
+      <div class="node"><span class="who">Bước 4</span><b>Rà lại</b>Model mạnh hơn kiểm tra lại mọi kết luận vi phạm</div>
+    </div>
+
+    <div class="note">
+      Vì bộ 20 mẫu đó được lưu lại cùng kết quả, mỗi lần AI sai ta <strong>chỉ đích danh được thẻ tri thức nào gây ra</strong> — thay vì đoán. Đây là nền của toàn bộ Phase 1: phản hồi của QC được gắn vào một thẻ cụ thể, không phải một lời phàn nàn chung.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 5 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="5 kiểu sai — 5 đường sửa">
+  <div class="rail"><span class="eyebrow">Cơ chế</span><span class="num">05 / 17</span></div>
+  <div class="stack">
+    <h2>Năm kiểu sai — mỗi kiểu một đường sửa khác nhau</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th></th><th>Kiểu sai</th><th>Nhìn vào đâu để biết</th><th>Cách sửa</th><th>Ai xử lý</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="n">1</td><td><b>Thiếu tri thức</b></td><td>Không mẫu nào trong 20 mẫu liên quan tới câu đang xét</td><td>Tạo thẻ mới</td><td>QC</td></tr>
+          <tr><td class="n">2</td><td><b>Có thẻ nhưng không lấy ra được</b></td><td>Thẻ đúng có trong kho, nhưng không lọt vào 10 mẫu</td><td>Thêm biến thể câu vào thẻ sẵn có</td><td>QC</td></tr>
+          <tr><td class="n">3</td><td><b>Có thẻ nhưng AI bỏ qua</b></td><td>Thẻ nằm trong danh sách, AI không trích dẫn, vẫn quyết ngược</td><td>Viết lại phần mô tả của thẻ</td><td>QC + EDA</td></tr>
+          <tr><td class="n">4</td><td><b>Hai thẻ mâu thuẫn</b></td><td>Một mẫu vi phạm và một mẫu ngoại lệ cùng phủ một câu</td><td>Phân xử: gỡ một thẻ, hoặc thêm dấu hiệu phân biệt</td><td>QC Lead</td></tr>
+          <tr class="is-out"><td class="n">5</td><td><b>AI không bắt ngay từ đầu</b></td><td>Không có kết luận nào để rà — bước quét đã bỏ qua</td><td>Sửa luật quét, <b>không</b> sửa bằng thẻ tri thức</td><td>EDA</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note n-warn">
+      <strong>Kiểu 5 nằm ngoài phạm vi giao diện tri thức.</strong> Bốn kiểu đầu QC tự xử lý được. Kiểu 5 phải vào backlog kỹ thuật — nếu không tách bạch, QC sẽ mất niềm tin vì có những lỗi báo lên mà thẻ tri thức không bao giờ chữa được.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 6 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Thẻ tri thức — đơn vị nhỏ nhất">
+  <div class="rail"><span class="eyebrow">Cơ chế</span><span class="num">06 / 17</span></div>
+  <div class="stack">
+    <h2>Thẻ tri thức — đơn vị nhỏ nhất mà QC quản lý</h2>
+    <div class="g2-narrow">
+      <div class="stack-tight">
+        <table>
+          <tbody>
+            <tr><td><b>Mã thẻ</b></td><td>Cố định, không đổi khi sửa nội dung</td></tr>
+            <tr><td><b>Loại</b></td><td>Mẫu vi phạm / Mẫu ngoại lệ</td></tr>
+            <tr><td><b>Nhóm lỗi</b></td><td>Theo bộ tiêu chí thái độ hiện hành</td></tr>
+            <tr><td><b>Mẫu câu</b></td><td>Danh sách biến thể của cùng một ý</td></tr>
+            <tr><td><b>Mô tả</b></td><td>Khi nào áp dụng, khi nào không</td></tr>
+            <tr><td><b>Trạng thái</b></td><td>Nháp / Đang dùng / Đã gỡ</td></tr>
+            <tr><td><b>Nguồn</b></td><td>Call gốc, người note, ngày</td></tr>
+            <tr><td><b>Thống kê</b></td><td>Số lần được lấy ra, số lần dẫn tới kết luận đúng / sai</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="stack-tight">
+        <div class="card">
+          <div class="fields">
+            <div class="field"><span class="fk">Mã thẻ</span><span class="mono">pol_7c41a9</span></div>
+            <div class="field"><span class="fk">Loại</span><span><span class="tag t-flag">Mẫu vi phạm</span></span></div>
+            <div class="field"><span class="fk">Nhóm</span><span>Gán nhãn cách khách hàng nói</span></div>
+            <div class="field"><span class="fk">Mẫu câu</span><span>“anh chị nói lan man”<br>“anh chị hiểu kiểu gì vậy”</span></div>
+            <div class="field"><span class="fk">Mô tả</span><span>ĐTV gán nhãn cho cách khách hàng nói. Áp dụng khi câu hướng trực tiếp vào khách hàng.</span></div>
+            <div class="field"><span class="fk">Nguồn</span><span class="small">QC · 24.07.2026 · 1 call</span></div>
+          </div>
+        </div>
+        <div class="note">
+          <strong>Phần mô tả là thứ AI thực sự đọc để quyết định.</strong> Nó phải là lời của QC. Khi hai nhận xét của QC mâu thuẫn nhau, hệ thống đưa lên cho người phân xử — không tự nghĩ ra dấu hiệu phân biệt mà QC chưa từng nói.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 7 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Xung đột tri thức">
+  <div class="rail"><span class="eyebrow">Cơ chế</span><span class="num">07 / 17</span></div>
+  <div class="stack">
+    <h2>Hai thẻ, cùng một chữ, hai kết luận ngược nhau</h2>
+    <p class="lede">Ví dụ có thật trong kho tri thức hiện tại — cùng chữ “lan man”:</p>
+
+    <div class="g2">
+      <div class="stack-tight">
+        <span class="tag t-flag">Mẫu vi phạm</span>
+        <div class="sample pos">“anh chị nói <strong>lan man</strong>”</div>
+        <p class="small">Gán nhãn cho <strong>người nghe</strong> — nhận xét về cách khách hàng nói.</p>
+      </div>
+      <div class="stack-tight">
+        <span class="tag t-ok">Mẫu ngoại lệ</span>
+        <div class="sample neg">“giải quyết từng vấn đề một tránh <strong>lan man</strong>”</div>
+        <p class="small">Đề nghị về <strong>cách làm việc</strong> — không gán nhãn cho ai.</p>
+      </div>
+    </div>
+
+    <div class="note">
+      Chữ giống nhau, kết luận ngược nhau. Thứ phân biệt hai thẻ không nằm ở mẫu câu mà nằm ở <strong>mô tả</strong>. Khi QC thêm một thẻ mới, hệ thống tự tìm thẻ đối nghịch gần nghĩa nhất và <strong>chặn lại nếu quá giống</strong>, đưa lên QC Lead phân xử thay vì lặng lẽ nhận vào và để AI tự mâu thuẫn.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 8 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Giao diện quản lý tri thức">
+  <div class="rail"><span class="eyebrow">Giao diện</span><span class="num">08 / 17</span></div>
+  <div class="stack">
+    <h2>Giao diện quản lý tri thức</h2>
+    <div class="g3">
+      <div class="card on-acc">
+        <span class="tag t-acc">Tìm</span>
+        <h3>Tìm theo ý, không cần đúng chữ</h3>
+        <p>Gõ “chê khách hàng nói dài dòng” vẫn ra thẻ “anh chị nói lan man”. Dùng đúng công cụ tìm kiếm mà AI đang dùng, nên kết quả QC thấy là kết quả AI thấy.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Sửa</span>
+        <h3>Mỗi thẻ một dòng, biến thể là danh sách</h3>
+        <p>Biến thể được thêm/xoá từng câu, không phải gõ vào một ô văn bản dài. Một thẻ giữ đúng một ý — không gộp nhiều tình huống vào chung một mô tả.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Duyệt</span>
+        <h3>Thẻ mới nằm ở trạng thái Nháp</h3>
+        <p>Nháp không ảnh hưởng tới AI đang chạy. Chỉ khi QC Lead duyệt và lô thẻ qua cổng kiểm định thì thẻ mới có hiệu lực.</p>
+      </div>
+    </div>
+    <div class="note">
+      Kho tri thức vẫn được lưu như hiện tại để AI đọc; giao diện ghi vào một cơ sở dữ liệu riêng rồi <strong>kết xuất ra bản chính thức khi publish</strong>. Nhờ vậy Phase 1 không đụng vào pipeline đang chạy — rủi ro kỹ thuật gần như bằng không.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 9 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Thử câu này">
+  <div class="rail"><span class="eyebrow">Giao diện</span><span class="num">09 / 17</span></div>
+  <div class="stack">
+    <h2>“Thử câu này” — QC tự kiểm chứng trước khi duyệt</h2>
+    <div class="g2-wide">
+      <div class="mock">
+        <div class="mock-bar">Thử một câu</div>
+        <div class="mock-body">
+          <div class="mock-input">chị cứ nói lan man thế này thì em không giải quyết được</div>
+          <p class="small">20 mẫu AI sẽ nhìn thấy nếu gặp câu này:</p>
+          <div class="g2">
+            <div>
+              <p class="small"><b>Mẫu vi phạm</b></p>
+              <div class="row hit"><span class="id">P1</span><span class="txt">anh chị nói lan man</span><span class="sc">0.91</span></div>
+              <div class="row"><span class="id">P2</span><span class="txt">anh chị hiểu kiểu gì vậy</span><span class="sc">0.74</span></div>
+              <div class="row"><span class="id">P3</span><span class="txt">anh chị trao đổi lịch sự được không</span><span class="sc">0.71</span></div>
+              <div class="row"><span class="id">…</span><span class="txt">còn 7 mẫu</span><span class="sc"></span></div>
+            </div>
+            <div>
+              <p class="small"><b>Mẫu ngoại lệ</b></p>
+              <div class="row"><span class="id">C1</span><span class="txt">giải quyết từng vấn đề một tránh lan man</span><span class="sc">0.83</span></div>
+              <div class="row"><span class="id">C2</span><span class="txt">trao đổi đúng trọng tâm được không</span><span class="sc">0.69</span></div>
+              <div class="row"><span class="id">C3</span><span class="txt">mình tập trung vào khoản nợ cho gọn</span><span class="sc">0.64</span></div>
+              <div class="row"><span class="id">…</span><span class="txt">còn 7 mẫu</span><span class="sc"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="stack-tight">
+        <div class="card on-acc">
+          <h3>Vì sao tính năng này quan trọng</h3>
+          <p>Thêm một thẻ mà thẻ đó không bao giờ được lấy ra thì việc thêm là vô nghĩa. Ô thử câu cho QC tự trả lời câu hỏi đó <strong>trước khi</strong> duyệt, thay vì chờ một tuần rồi mới biết.</p>
+        </div>
+        <div class="card">
+          <h3>Cũng là công cụ giải thích</h3>
+          <p>Khi QC thắc mắc “sao AI lại bắt câu này”, dán câu vào ô thử là thấy ngay AI đang dựa vào mẫu nào. Tranh luận chuyển từ cảm tính sang bằng chứng.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 10 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Vòng phản hồi 7 bước">
+  <div class="rail"><span class="eyebrow">Quy trình</span><span class="num">10 / 17</span></div>
+  <div class="stack">
+    <h2>Vòng phản hồi, bảy bước</h2>
+    <div class="steps">
+      <div class="step is-manual">
+        <span class="k">01</span><span class="who">QC</span><b>Ghi nhận</b>
+        <p>Note trên VQC UI: turn nào, đúng ra phải là gì, vì sao — bằng lời của QC.</p>
+      </div>
+      <div class="step">
+        <span class="k">02</span><span class="who">Tự động</span><b>Phân loại</b>
+        <p>Đọc dấu vết AI để lại, gán một trong năm kiểu sai.</p>
+      </div>
+      <div class="step">
+        <span class="k">03</span><span class="who">Tự động</span><b>Soạn thẻ</b>
+        <p>Tìm thẻ gần nhất → gộp thành biến thể, hoặc tạo thẻ nháp mới.</p>
+      </div>
+      <div class="step is-manual">
+        <span class="k">04</span><span class="who">QC Lead</span><b>Duyệt</b>
+        <p>Sửa lời, duyệt, hoặc từ chối. Xung đột được đưa lên ở đây.</p>
+      </div>
+      <div class="step">
+        <span class="k">05</span><span class="who">Tự động</span><b>Kiểm định</b>
+        <p>Chạy lại bộ dữ liệu chuẩn, báo cáo chênh lệch trước–sau.</p>
+      </div>
+      <div class="step is-manual">
+        <span class="k">06</span><span class="who">EDA</span><b>Publish</b>
+        <p>Gộp lô thẻ đã duyệt, ra bản tri thức mới, theo tuần.</p>
+      </div>
+      <div class="step">
+        <span class="k">07</span><span class="who">Tự động</span><b>Đối soát</b>
+        <p>Chấm lại các call đã note, trả kết quả trước–sau về UI cho QC.</p>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <h3>QC chạm vào ba bước</h3>
+        <p>Bước 1 ghi nhận, bước 4 duyệt, bước 7 xác nhận. Bốn bước còn lại hệ thống tự làm.</p>
+      </div>
+      <div class="card on-warn">
+        <span class="tag t-warn">Nguyên tắc</span>
+        <h3>QC không ghi thẳng vào tri thức đang chạy</h3>
+        <p>Mọi thay đổi phải qua hai cửa: người duyệt và cổng kiểm định. Đây là thứ giữ cho vòng lặp tự động không tự làm hỏng chính nó.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 11 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Gộp biến thể trước, tạo thẻ mới sau">
+  <div class="rail"><span class="eyebrow">Quy trình</span><span class="num">11 / 17</span></div>
+  <div class="stack">
+    <h2>Thêm thẻ không phải lúc nào cũng là thêm kiến thức</h2>
+
+    <div class="stats">
+      <div class="stat"><span class="v">972</span><span class="l">mẫu đang có trong kho tri thức</span></div>
+      <div class="stat is-acc"><span class="v">20</span><span class="l">mẫu AI được đọc mỗi lần ra quyết định</span></div>
+      <div class="stat is-flag"><span class="v">2%</span><span class="l">tỉ lệ kho tri thức thực sự tới được AI</span></div>
+    </div>
+
+    <p class="lede">Mỗi thẻ mới phải cạnh tranh một chỗ trong 20 suất đó. Thêm một thẻ trùng ý với thẻ cũ không làm AI biết thêm gì — nó đẩy một thẻ khác ra ngoài.</p>
+
+    <div class="g2">
+      <div class="card on-ok">
+        <span class="tag t-ok">Mặc định</span>
+        <h3>Gộp thành biến thể của thẻ sẵn có</h3>
+        <p>Câu mới rất giống một thẻ cùng loại → thêm vào thẻ đó như một cách nói khác. Kho không phình ra, khả năng tìm thấy tăng lên.</p>
+      </div>
+      <div class="card on-warn">
+        <span class="tag t-warn">Ngoại lệ</span>
+        <h3>Tạo thẻ mới khi thật sự là tình huống mới</h3>
+        <p>Chỉ khi không thẻ nào đủ gần. Nếu câu mới lại rất giống một thẻ <em>khác loại</em>, hệ thống chặn và chuyển sang phân xử.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 12 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Cổng kiểm định và một sự thật khó chịu">
+  <div class="rail"><span class="eyebrow">Quy trình</span><span class="num">12 / 17</span></div>
+  <div class="stack">
+    <h2>Cổng kiểm định — và một sự thật khó chịu cần thống nhất trước</h2>
+
+    <div class="g2">
+      <div class="card on-ok">
+        <span class="tag t-ok">Cổng kiểm định</span>
+        <h3>Mỗi lô thẻ phải chạy qua bộ dữ liệu chuẩn</h3>
+        <p>Bộ chuẩn hiện có: <strong>425 cuộc gọi UAT đã có nhãn QC</strong>. Lô thẻ mới chạy lại toàn bộ, báo cáo độ chính xác và độ bao phủ trước–sau, kèm danh sách call đổi kết quả. Lô làm tệ đi thì không được publish.</p>
+      </div>
+      <div class="card on-flag">
+        <span class="tag t-flag">Sự thật khó chịu</span>
+        <h3>Cùng một cuộc gọi, chạy hai lần, kết quả lệch ~27%</h3>
+        <p>Đây là đặc tính của mô hình ngôn ngữ trên hạ tầng hiện tại, không sửa được bằng cấu hình. Nghĩa là: <strong>không thể xác nhận một thẻ đơn lẻ bằng một lần chạy trước–sau.</strong></p>
+      </div>
+    </div>
+
+    <div class="note n-warn">
+      <strong>Hệ quả cần QC đồng thuận:</strong> sẽ không có xác nhận tức thì cho từng thẻ. Thẻ được gộp thành lô và publish theo tuần; chênh lệch nằm trong ngưỡng nhiễu được tính là “không đổi”. Đổi lại, cái QC nhận được là một con số đo trên toàn bộ 425 call, đáng tin hơn nhiều so với cảm nhận trên vài call lẻ.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 13 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Ai làm gì">
+  <div class="rail"><span class="eyebrow">Vận hành</span><span class="num">13 / 17</span></div>
+  <div class="stack">
+    <h2>Ai làm gì</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Bên</th><th>Làm gì</th><th>Quyết định cuối về</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>QC</b></td>
+            <td>Nghe call, note lỗi kèm lý do. Tìm và đọc tri thức. Thử câu để kiểm chứng. Đề xuất thẻ.</td>
+            <td>Nội dung phản hồi</td>
+          </tr>
+          <tr>
+            <td><b>QC Lead</b></td>
+            <td>Duyệt hoặc từ chối thẻ. Phân xử khi thẻ vi phạm và thẻ ngoại lệ mâu thuẫn. Chốt lời văn của mô tả.</td>
+            <td><b>Tri thức</b> — đúng/sai về nghiệp vụ</td>
+          </tr>
+          <tr>
+            <td><b>EDA / DS</b></td>
+            <td>Dựng và giữ bộ dữ liệu chuẩn. Chạy cổng kiểm định. Publish theo lô. Xử lý kiểu sai số 5.</td>
+            <td><b>Chất lượng</b> — lô có được publish hay không</td>
+          </tr>
+          <tr>
+            <td><b>IT</b></td>
+            <td>VQC UI + panel note lỗi. Lưu phản hồi. Cung cấp API cho EDA đọc. Kích hoạt chấm lại.</td>
+            <td>Giao diện và đường truyền dữ liệu</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      Một ranh giới cần rõ ngay từ đầu: <strong>QC Lead quyết định thế nào là đúng về nghiệp vụ; EDA quyết định lô thay đổi có đủ an toàn để đưa vào hay không.</strong> Hai quyền này không chồng lên nhau, và không bên nào một mình đẩy được thay đổi lên production.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 14 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Với QC, thay đổi là gì">
+  <div class="rail"><span class="eyebrow">Vận hành</span><span class="num">14 / 17</span></div>
+  <div class="stack">
+    <h2>Với QC, cụ thể thay đổi là gì</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Tình huống</th><th>Hôm nay</th><th>Sau Phase 1</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>Thấy AI chấm sai</b></td>
+            <td>Ghi ra file, gửi cho đội kỹ thuật, chờ.</td>
+            <td>Note ngay tại turn trên UI. Hệ thống tự phân loại và soạn thẻ đề xuất.</td>
+          </tr>
+          <tr>
+            <td><b>Muốn biết vì sao AI kết luận vậy</b></td>
+            <td>Không có cách nào ngoài hỏi đội kỹ thuật.</td>
+            <td>Mở thẻ tri thức AI đã dùng, hoặc dán câu vào ô thử để xem AI nhìn thấy gì.</td>
+          </tr>
+          <tr>
+            <td><b>Muốn thêm một luật mới</b></td>
+            <td>Mô tả bằng lời, chờ Dev dịch thành luật.</td>
+            <td>Tự soạn thẻ, tự thử, gửi QC Lead duyệt.</td>
+          </tr>
+          <tr>
+            <td><b>Muốn biết đã sửa xong chưa</b></td>
+            <td>Tự nhớ, tự kiểm lại thủ công.</td>
+            <td>Call đã note được chấm lại tự động; UI hiện kết quả trước – sau – kỳ vọng của QC.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note n-warn">
+      <strong>Điều QC cần cam kết ngược lại:</strong> phản hồi phải kèm lý do bằng lời của QC, và phải có người review những cuộc gọi AI đã cho qua. Nếu chỉ báo lỗi ở những call AI đã bắt, hệ thống chỉ học được cách bắt ít đi — không bao giờ học được cách bắt đúng thêm.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 15 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Phạm vi Phase 1 và các phase sau">
+  <div class="rail"><span class="eyebrow">Vận hành</span><span class="num">15 / 17</span></div>
+  <div class="stack">
+    <h2>Phạm vi</h2>
+    <div class="g3">
+      <div class="card on-ok">
+        <span class="tag t-ok">Phase 1 — làm ngay</span>
+        <h3>Quản lý tri thức + vòng phản hồi</h3>
+        <p>
+          Panel note lỗi trên VQC UI.<br>
+          Giao diện tìm / sửa / duyệt thẻ.<br>
+          Tìm kiếm theo ý + ô thử câu.<br>
+          Phát hiện trùng và xung đột.<br>
+          Cổng kiểm định + publish theo lô.<br>
+          Đối soát trước–sau cho call đã note.<br>
+          Xem được thẻ nào khiến AI ra kết luận.
+        </p>
+      </div>
+      <div class="card">
+        <span class="tag">Phase 2 — kế tiếp</span>
+        <h3>Mở toàn bộ luồng trung gian</h3>
+        <p>
+          Xem từng bước AI đã làm gì trên một call.<br>
+          Xem nội dung hướng dẫn từng bước.<br>
+          Chạy thử một call với tri thức bản nháp.<br>
+          So sánh nhiều bản tri thức trên cùng một call.
+        </p>
+        <p class="small">Phần lớn dữ liệu cho Phase 2 <b>đã được ghi sẵn</b> — chủ yếu là việc hiển thị.</p>
+      </div>
+      <div class="card">
+        <span class="tag">Phase 3 — tương lai</span>
+        <h3>QC chỉnh cả luật quét</h3>
+        <p>
+          Sửa luật ở bước quét (kiểu sai số 5).<br>
+          Tự động đề xuất gỡ thẻ kém hiệu quả.<br>
+          Cùng đi qua một cổng kiểm định.
+        </p>
+      </div>
+    </div>
+    <div class="note">
+      <strong>Ngoài phạm vi Phase 1:</strong> lỗi do chất lượng dữ liệu (sai nhận dạng giọng nói, tạp âm, nhầm người nói) không đi vào tri thức AI. Loại này cần một hàng đợi riêng và một đội chịu trách nhiệm riêng — nếu trộn vào, tri thức sẽ nhiễm lỗi hạ tầng.
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 16 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Sáu câu hỏi cần chốt hôm nay">
+  <div class="rail"><span class="eyebrow">Quyết định</span><span class="num">16 / 17</span></div>
+  <div class="stack">
+    <h2>Sáu câu hỏi cần chốt hôm nay</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th></th><th>Câu hỏi</th><th>Vì sao phải chốt trước khi build</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="n">1</td><td><b>Ai duyệt thẻ?</b> QC Lead một mình, hay QC Lead cùng EDA?</td><td>Quyết định cổng kiểm định là bắt buộc hay chỉ để tham khảo.</td></tr>
+          <tr><td class="n">2</td><td><b>Nhịp publish?</b> Gộp lô theo tuần, hay publish ngay từng thẻ.</td><td>Gộp lô là cách duy nhất sống chung được với độ nhiễu 27%.</td></tr>
+          <tr><td class="n">3</td><td><b>Ai phân xử khi hai thẻ mâu thuẫn?</b></td><td>Bước soạn thẻ dừng lại ở đây; không có phương án mặc định nào an toàn.</td></tr>
+          <tr><td class="n">4</td><td><b>Mỗi tuần QC review bao nhiêu call AI đã cho qua?</b></td><td>Không có con số này thì độ bao phủ của AI không bao giờ cải thiện được.</td></tr>
+          <tr><td class="n">5</td><td><b>Dự kiến bao nhiêu phản hồi mỗi tuần?</b></td><td>10 thì một bảng tính là đủ; 200 thì cần đúng giao diện như trình bày.</td></tr>
+          <tr><td class="n">6</td><td><b>QC có cần xem thẻ nào khiến AI gán lỗi ngay từ Phase 1?</b></td><td>Đây là ranh giới giữa phản hồi truy được nguyên nhân và phản hồi cảm tính.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 17 ═══════════════════════════════════════════════════ -->
+<section class="slide" data-title="Lộ trình Phase 1">
+  <div class="rail"><span class="eyebrow">Quyết định</span><span class="num">17 / 17</span></div>
+  <div class="stack">
+    <h2>Lộ trình Phase 1</h2>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Mốc</th><th>Kết quả bàn giao</th><th>Chủ trì</th><th>Tuần</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="n">M1</td><td>Chốt sáu câu hỏi · chốt nơi lưu tri thức · chốt hợp đồng API giữa IT và EDA</td><td>QC + IT + EDA</td><td>W1</td></tr>
+          <tr><td class="n">M2</td><td>Bộ dữ liệu chuẩn được đóng băng + báo cáo chỉ số nền</td><td>EDA</td><td>W1–W2</td></tr>
+          <tr><td class="n">M3</td><td>Panel note lỗi trên VQC UI + lưu phản hồi</td><td>IT</td><td>W2–W3</td></tr>
+          <tr><td class="n">M4</td><td>Giao diện tri thức: tìm theo ý, sửa thẻ, ô thử câu</td><td>EDA</td><td>W3–W4</td></tr>
+          <tr><td class="n">M5</td><td>Phân loại kiểu sai + soạn thẻ tự động + phát hiện xung đột</td><td>EDA</td><td>W4</td></tr>
+          <tr><td class="n">M6</td><td>Cổng kiểm định + publish lô đầu tiên + đối soát trước–sau</td><td>EDA + IT</td><td>W5</td></tr>
+          <tr><td class="n">M7</td><td>Chạy thử đầu–cuối trên UAT với 20 phản hồi thật của QC</td><td>Cả ba bên</td><td>W6</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <strong>M2 là mốc chặn.</strong> Trước khi có bộ dữ liệu chuẩn đóng băng, mọi thay đổi tri thức đều là thay đổi không đo được — vòng lặp tự động khi đó chỉ làm hỏng nhanh hơn chứ không tốt lên nhanh hơn.
+    </div>
+  </div>
+</section>
+
+</div><!-- /stage -->
+</div><!-- /deck -->
+
+<div class="nav">
+  <span id="counter">1 / 17</span>
+  <button id="prev" aria-label="Trang trước">‹</button>
+  <button id="next" aria-label="Trang sau">›</button>
+</div>
+<p class="hint"><kbd>←</kbd> <kbd>→</kbd> chuyển trang · <kbd>Esc</kbd> mục lục · <kbd>Ctrl</kbd>+<kbd>P</kbd> xuất PDF</p>
+
+<nav class="idx" id="idx" aria-label="Mục lục">
+  <h2>Mục lục</h2>
+  <ol id="idxList"></ol>
+</nav>
+
+<script>
+(function () {
+  var slides   = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var counter  = document.getElementById('counter');
+  var progress = document.getElementById('progress');
+  var idx      = document.getElementById('idx');
+  var idxList  = document.getElementById('idxList');
+  var i = 0;
+
+  slides.forEach(function (s, k) {
+    var li = document.createElement('li');
+    li.tabIndex = 0;
+    li.innerHTML = '<span class="n">' + String(k + 1).padStart(2, '0') + '</span>' +
+                   '<span>' + (s.dataset.title || '') + '</span>';
+    li.addEventListener('click', function () { go(k); closeIdx(); });
+    li.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(k); closeIdx(); }
+    });
+    idxList.appendChild(li);
+  });
+  var idxItems = Array.prototype.slice.call(idxList.children);
+
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+    idxItems.forEach(function (li, k) { li.classList.toggle('on', k === i); });
+    counter.textContent = (i + 1) + ' / ' + slides.length;
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+  }
+  function closeIdx() { idx.classList.remove('is-open'); }
+
+  document.getElementById('prev').addEventListener('click', function () { go(i - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(i + 1); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'PageDown': case ' ': e.preventDefault(); go(i + 1); break;
+      case 'ArrowLeft':  case 'PageUp':            e.preventDefault(); go(i - 1); break;
+      case 'Home':  e.preventDefault(); go(0); break;
+      case 'End':   e.preventDefault(); go(slides.length - 1); break;
+      case 'Escape':
+        e.preventDefault();
+        idx.classList.toggle('is-open');
+        break;
+    }
+  });
+
+  var start = parseInt((location.hash || '').slice(1), 10);
+  go(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+
+</body>
+</html>

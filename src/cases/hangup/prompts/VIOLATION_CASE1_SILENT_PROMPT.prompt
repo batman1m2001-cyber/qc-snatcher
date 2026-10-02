@@ -1,0 +1,45 @@
+Phân tích vi phạm **"Cố tình ngắt máy"** - Trường hợp khách hàng im lặng.
+
+Bối cảnh:
+- Cuộc gọi này đã được hệ thống rule-based xác định **agent là người chủ động ngắt máy**.
+- Cuộc gọi này **khách hàng im lặng** (không có turn nào của CUSTOMER, hoặc chỉ có tiếng ồn/nói vô nghĩa).
+- Nhiệm vụ của bạn: xác định xem **việc agent ngắt máy trong tình huống này có phải hành vi vi phạm hay không.**
+
+**QUY TẮC XÉT VI PHẠM:**
+
+Chỉ cần kiểm tra một điều duy nhất: **Agent có lời chào hoặc xin phép kết thúc cuộc gọi hay không?**
+
+- **Không vi phạm** nếu Agent có lời chào/xin phép kết thúc — bất kỳ biến thể nào sau đây đều tính:
+  - Closure cơ bản: "em cảm ơn", "cảm ơn anh/chị", "chào anh/chị", "em xin phép", "chào anh ạ", "cảm ơn chào anh chị ạ"
+  - Closure khi KH im lặng / không hợp tác:
+    + "em không nghe thấy phản hồi nên em xin ngắt máy"
+    + "ngân hàng em không nghe thấy mình trao đổi, em xin phép ngắt máy"
+    + "không sẵn sàng trao đổi em xin phép ngắt máy"
+    + "em xin lỗi vì sự bất tiện này nhá... em xin phép dừng máy"
+    + "trao đổi cuộc gọi sau" / "gọi lại sau" / "tiếp tục liên hệ lại cuộc gọi sau"
+    + "không phản hồi lại ngân hàng ngắt máy nhá, tiếp tục liên hệ"
+    + "ghi nhận anh/chị không hợp tác trao đổi, ngân hàng liên hệ lần sau"
+  - Closure khi gửi lời nhắn cho người nhà / BT3:
+    + "nhờ anh/chị nhắn giúp em"
+    + "chuyển lời nhắn giúp em"
+    + "ngân hàng trao đổi một số thông tin quan trọng"
+  - **Lưu ý**: Do voice-to-text có thể sai, cần linh hoạt nhận diện các biến thể như "cảm ơn cho anh chị" = "cảm ơn, chào anh chị", "dạ v ơn" = "dạ vâng / cảm ơn". Bất kỳ cụm tương tự chứa "cảm ơn", "chào", "ngắt máy", "liên hệ sau", "nhắn", "ghi nhận" ở cuối cuộc gọi đều được coi là closure hợp lệ.
+
+- **Vi phạm** nếu Agent ngắt máy mà KHÔNG có bất kỳ lời chào / cảm ơn / xin phép / ghi nhận / closure mở rộng nào.
+
+Transcript được cho dưới dạng `[N] AGENT: ...` hoặc `[x] CUSTOMER: ...`, trong đó `N` là turn_idx của lượt AGENT (số nguyên, dùng để trích bằng chứng). Lượt CUSTOMER bị mask thành `[x]` — KHÔNG được trích idx của CUSTOMER.
+
+Trả về định dạng XML (không thêm bất cứ thông tin thừa nào):
+<result>
+<violation>true/false</violation>
+<reason>Lý do ngắn gọn tại sao vi phạm hoặc không vi phạm</reason>
+<evidence>
+  Danh sách turn_idx AGENT gây vi phạm, format: 3, 7, 12
+  (Chỉ điền số nguyên có xuất hiện trong `[N] AGENT:` ở transcript. KHÔNG bịa idx.)
+</evidence>
+</result>
+
+Lưu ý: Nếu không vi phạm, để trống tag <evidence>.
+
+Đây là nội dung cuộc gọi:
+{transcript}

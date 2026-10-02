@@ -1,0 +1,29 @@
+# Framework — replaces the three vendored hush wheels this image used to
+# install from /app/pkgs. hush was private, so a wheel was the only
+# channel; operonx is public on PyPI and the Nexus pypi-proxy configured
+# above serves it like any other package. Nothing left to vendor.
+#
+# The extras name the backends this pipeline runs. `pgvector` brings
+# psycopg, `triton` brings tritonclient and tokenizers. The explicit pins
+# further down are tighter than operonx's floors and satisfy them, so
+# they win and no resolution conflict arises.
+operonx[openai,pgvector,triton]==1.11.0
+
+# No onnxruntime / faiss: retrieval is remote only (Triton + pgvector) and
+# `require_remote_retrieval()` refuses a local backend. tokenizers comes in
+# with the `triton` extra.
+
+# langfuse is gone with the remote tracer. `create_engine` raises on
+# tracer_kind='langfuse' — a remote consumer captures op inputs, and this
+# pipeline passes whole transcripts through a dozen ops.
+
+# Utilities
+urllib3==2.7.0
+python-dotenv>=1.2.1
+boto3==1.42.81
+paramiko==4.0.0
+databricks-sdk==0.102.0
+databricks-sql-connector==4.2.6
+databricks-sql-connector[pyarrow]
+psycopg[binary,pool]==3.3.4
+tritonclient[grpc]==2.71.0

@@ -1,0 +1,25 @@
+Xác định xem Agent có đang nói **câu mẫu dành cho callbot/trợ lý ảo** hay không.
+
+**CỤM TỪ GỐC:** "liên hệ để trao đổi thông tin quan trọng"
+
+**DẤU HIỆU NHẬN BIẾT (phải xuất hiện CÙNG NHAU):**
+1. Nhắc đến "ngân hàng" (hoặc biến thể voice-to-text: "vi pi banh", v.v.)
+2. Cụm "thông tin quan trọng" (hoặc biến thể: "thông tin h quan trọng", v.v.)
+3. Yêu cầu "vui lòng nghe máy" hoặc "nghe máy để được hỗ trợ"
+
+**VÍ DỤ is_bot = true:**
+- "chào anh em hoàng gọi từ ngân hàng vi pi banh hiện tại vi pi banh liên hệ để trao đổi thông tin quan trọng tới anh chị anh chị vui lòng nghe máy để được hỗ trợ ạ"
+- "hiện tại vi pi banh liên hệ để trao đổi thông tin quan trọng tới anh chị anh chị vui lòng nghe máy để được hỗ trợ ạ"
+- "ngân hàng liên hệ trao đổi thông tin quan trọng anh chị vui lòng nghe máy"
+- "dạ ngân hàng những thông tin h quan trọng khi vui lòng nghe máy hoặc chủ động để ngân hàng hỗ trợ mình" (voice-to-text tệ nhưng vẫn nhận ra pattern gốc)
+
+**QUY TẮC:**
+- **is_bot = true** nếu Agent nói câu có đủ 3 yếu tố trên (dựa vào cụm gốc "liên hệ để trao đổi thông tin quan trọng" để suy luận)
+- **is_bot = false** nếu thiếu bất kỳ yếu tố nào
+
+Trả về định dạng XML:
+<is_bot>true/false</is_bot>
+<reason>Lý do ngắn gọn</reason>
+
+Đây là nội dung cuộc gọi:
+{transcript}

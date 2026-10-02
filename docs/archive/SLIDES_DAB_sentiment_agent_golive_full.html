@@ -1,0 +1,1555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virtual QC on Agent Sentiment — version 2</title>
+<style>
+/* ─────────────────────────────────────────────────────────────
+   TOKENS — light is the base; dark redefines tokens only.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --paper:    #f2f5f5;
+  --surface:  #ffffff;
+  --sunken:   #eaefef;
+  --line:     #d3dbdb;
+  --line-soft:#e4eaea;
+  --ink:      #0f1717;
+  --ink-2:    #33403f;
+  --muted:    #5d6c6c;
+  --accent:   #0a6a6e;
+  --accent-w: #e2f0f0;
+  --flag:     #a5322e;
+  --flag-w:   #fbeceb;
+  --ok:       #1a6b47;
+  --ok-w:     #e6f3ec;
+  --warn:     #8d5c07;
+  --warn-w:   #fbf2df;
+  --shadow:   0 1px 2px rgba(15,23,23,.06), 0 8px 24px rgba(15,23,23,.05);
+
+  --f-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --gem:#4285F4; --gem-w:#eaf1fe; --cla:#D97757; --cla-w:#fbeee8;
+  --f-mono: Consolas, "Cascadia Mono", "SF Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:    #0b1111;
+    --surface:  #131c1c;
+    --sunken:   #0f1717;
+    --line:     #263131;
+    --line-soft:#1d2727;
+    --ink:      #e7eeed;
+    --ink-2:    #c2cfce;
+    --muted:    #8fa1a0;
+    --accent:   #4cbcc0;
+    --accent-w: #102a2b;
+    --flag:     #e8817c;
+    --flag-w:   #2c1817;
+    --ok:       #55bd8b;
+    --ok-w:     #12261e;
+    --warn:     #dca944;
+    --warn-w:   #2a2213;
+    --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:    #0b1111;
+  --surface:  #131c1c;
+  --sunken:   #0f1717;
+  --line:     #263131;
+  --line-soft:#1d2727;
+  --ink:      #e7eeed;
+  --ink-2:    #c2cfce;
+  --muted:    #8fa1a0;
+  --accent:   #4cbcc0;
+  --accent-w: #102a2b;
+  --flag:     #e8817c;
+  --flag-w:   #2c1817;
+  --ok:       #55bd8b;
+  --ok-w:     #12261e;
+  --warn:     #dca944;
+  --warn-w:   #2a2213;
+  --shadow:   0 1px 2px rgba(0,0,0,.4), 0 8px 28px rgba(0,0,0,.32);
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── stage ────────────────────────────────────────────────── */
+.deck {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 2vmin;
+}
+.stage {
+  position: relative;
+  width: min(100%, 172vh);
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  container-type: size;
+  container-name: stage;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  display: none;
+  flex-direction: column;
+  padding: 4.2cqw 5cqw 4.6cqw;
+  font-size: 1.55cqw;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.slide.is-active { display: flex; }
+
+/* ── rail ─────────────────────────────────────────────────── */
+.rail {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 2cqw;
+  padding-bottom: 1.1cqw;
+  border-bottom: 1px solid var(--line-soft);
+  margin-bottom: 2.4cqw;
+  flex: none;
+}
+.eyebrow {
+  font-size: 1.05cqw;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.rail .num {
+  font-family: var(--f-mono);
+  font-size: 1.05cqw;
+  letter-spacing: .08em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── type ─────────────────────────────────────────────────── */
+h1, h2, h3 { margin: 0; text-wrap: balance; color: var(--ink); }
+h1 { font-size: 5.2cqw; font-weight: 700; letter-spacing: -.02em; line-height: 1.04; }
+h2 { font-size: 3.05cqw; font-weight: 700; letter-spacing: -.014em; line-height: 1.14; }
+h3 { font-size: 1.65cqw; font-weight: 700; letter-spacing: -.004em; }
+.lede {
+  font-size: 1.95cqw;
+  line-height: 1.42;
+  color: var(--muted);
+  max-width: 62ch;
+  margin: 1.1cqw 0 0;
+}
+.body { margin: 0; }
+.small { font-size: 1.25cqw; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: .93em; letter-spacing: -.01em; }
+strong { color: var(--ink); font-weight: 700; }
+em { font-style: normal; color: var(--accent); font-weight: 600; }
+
+.stack { display: flex; flex-direction: column; gap: 2cqw; flex: 1 1 auto; min-height: 0; }
+.stack-tight { display: flex; flex-direction: column; gap: 1.2cqw; }
+.spacer { flex: 1 1 auto; }
+
+/* ── title slide ──────────────────────────────────────────── */
+.title-slide { justify-content: center; padding-left: 6cqw; padding-right: 6cqw; }
+.title-mark {
+  width: 7cqw; height: .42cqw;
+  background: var(--accent);
+  border-radius: 99px;
+  margin-bottom: 2.6cqw;
+}
+.title-meta {
+  display: flex; flex-wrap: wrap; gap: .8cqw 2.4cqw;
+  font-size: 1.3cqw; color: var(--muted);
+  margin-top: 3cqw; padding-top: 1.6cqw;
+  border-top: 1px solid var(--line-soft);
+}
+.title-meta b { color: var(--ink); font-weight: 600; }
+.qlist { display: flex; flex-direction: column; gap: .7cqw; margin-top: 2.6cqw; }
+.qlist div { display: flex; gap: 1cqw; font-size: 1.5cqw; }
+.qlist span {
+  font-family: var(--f-mono); color: var(--accent); font-weight: 700;
+  font-variant-numeric: tabular-nums; flex: none;
+}
+
+/* ── grids ────────────────────────────────────────────────── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2cqw; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+.g2-wide { display: grid; grid-template-columns: 1.15fr 1fr; gap: 2.4cqw; }
+.g2-narrow { display: grid; grid-template-columns: .8fr 1fr; gap: 2.4cqw; }
+
+/* ── card ─────────────────────────────────────────────────── */
+.card {
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 5px;
+  padding: 1.5cqw 1.7cqw;
+  display: flex; flex-direction: column; gap: .6cqw;
+}
+.card h3 { font-size: 1.55cqw; }
+.card p { margin: 0; font-size: 1.4cqw; color: var(--muted); }
+.card.on-flag { background: var(--flag-w); border-color: color-mix(in srgb, var(--flag) 22%, transparent); }
+.card.on-ok   { background: var(--ok-w);   border-color: color-mix(in srgb, var(--ok) 24%, transparent); }
+.card.on-warn { background: var(--warn-w); border-color: color-mix(in srgb, var(--warn) 26%, transparent); }
+.card.on-acc  { background: var(--accent-w); border-color: color-mix(in srgb, var(--accent) 26%, transparent); }
+
+.tag {
+  align-self: flex-start;
+  font-size: 1.02cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  padding: .22cqw .7cqw; border-radius: 3px;
+  background: var(--surface); color: var(--muted);
+  border: 1px solid var(--line);
+}
+.tag.t-flag { color: var(--flag); border-color: color-mix(in srgb, var(--flag) 36%, transparent); }
+.tag.t-ok   { color: var(--ok);   border-color: color-mix(in srgb, var(--ok) 38%, transparent); }
+.tag.t-acc  { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.tag.t-warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 42%, transparent); }
+
+/* ── flow chain ───────────────────────────────────────────── */
+.flow { display: flex; align-items: stretch; gap: .5cqw; flex-wrap: wrap; }
+.flow > .node {
+  flex: 1 1 0; min-width: 0;
+  background: var(--sunken);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  padding: 1cqw 1.1cqw;
+  font-size: 1.32cqw;
+  display: flex; flex-direction: column; gap: .3cqw;
+}
+.flow > .node b { font-size: 1.32cqw; }
+.flow > .node .who {
+  font-size: 1cqw; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); font-weight: 700;
+}
+.flow > .arrow {
+  flex: none; align-self: center;
+  color: var(--line); font-size: 1.6cqw; font-weight: 700;
+}
+.flow.is-cold > .node { background: transparent; border-style: dashed; border-color: var(--line); color: var(--muted); }
+.flow.is-cold > .node b { color: var(--muted); font-weight: 600; }
+
+/* ── tables ───────────────────────────────────────────────── */
+.tbl-wrap { overflow-x: auto; }
+table {
+  width: 100%; border-collapse: collapse;
+  font-size: 1.32cqw; line-height: 1.38;
+}
+th, td {
+  text-align: left; vertical-align: top;
+  padding: .78cqw .9cqw;
+  border-bottom: 1px solid var(--line-soft);
+}
+th {
+  font-size: 1.05cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted); border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+tbody tr:last-child td { border-bottom: none; }
+td b, th b { color: var(--ink); }
+td.n {
+  font-family: var(--f-mono); color: var(--accent); font-weight: 700;
+  font-variant-numeric: tabular-nums; width: 2.4cqw;
+}
+tr.is-out td { color: var(--muted); }
+tr.is-out td b { color: var(--muted); }
+
+/* ── numbered steps ───────────────────────────────────────── */
+.steps { display: grid; grid-template-columns: repeat(7, 1fr); gap: .7cqw; }
+.step {
+  border-top: .28cqw solid var(--accent);
+  padding-top: .9cqw;
+  display: flex; flex-direction: column; gap: .35cqw;
+}
+.step .k {
+  font-family: var(--f-mono); font-size: 1.05cqw; font-weight: 700;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.step b { font-size: 1.35cqw; }
+.step .who { font-size: 1.02cqw; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.step p { margin: 0; font-size: 1.2cqw; color: var(--muted); }
+.step.is-manual { border-top-color: var(--warn); }
+.step.is-manual .k { color: var(--warn); }
+
+/* ── quote / sample ───────────────────────────────────────── */
+.sample {
+  font-size: 1.5cqw;
+  padding: .75cqw 1cqw;
+  border-left: .28cqw solid var(--line);
+  background: var(--sunken);
+  border-radius: 0 4px 4px 0;
+}
+.sample.pos { border-left-color: var(--flag); }
+.sample.neg { border-left-color: var(--ok); }
+
+/* ── note ─────────────────────────────────────────────────── */
+.note {
+  border-left: .28cqw solid var(--accent);
+  background: var(--accent-w);
+  padding: 1cqw 1.4cqw;
+  border-radius: 0 4px 4px 0;
+  font-size: 1.42cqw;
+}
+.note.n-warn { border-left-color: var(--warn); background: var(--warn-w); }
+.note.n-flag { border-left-color: var(--flag); background: var(--flag-w); }
+
+/* ── stat ─────────────────────────────────────────────────── */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.6cqw; }
+.stat { display: flex; flex-direction: column; gap: .2cqw; }
+.stat .v {
+  font-size: 3.6cqw; font-weight: 700; letter-spacing: -.03em; color: var(--ink);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.stat .l { font-size: 1.25cqw; color: var(--muted); }
+.stat.is-acc .v { color: var(--accent); }
+.stat.is-flag .v { color: var(--flag); }
+
+/* ── mock UI ──────────────────────────────────────────────── */
+.mock {
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--surface);
+  display: flex; flex-direction: column;
+}
+.mock-bar {
+  background: var(--sunken);
+  border-bottom: 1px solid var(--line-soft);
+  padding: .7cqw 1cqw;
+  font-size: 1.1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--muted);
+}
+.mock-body { padding: 1.1cqw; display: flex; flex-direction: column; gap: .6cqw; }
+.mock-input {
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: .8cqw 1cqw;
+  font-size: 1.42cqw;
+  color: var(--ink);
+  background: var(--surface);
+}
+.row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 1cqw;
+  font-size: 1.3cqw;
+  padding: .42cqw 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.row:last-child { border-bottom: none; }
+.row .id { font-family: var(--f-mono); font-size: 1.12cqw; color: var(--muted); flex: none; }
+.row .sc { font-family: var(--f-mono); font-size: 1.12cqw; color: var(--muted); font-variant-numeric: tabular-nums; flex: none; }
+.row .txt { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.hit .txt { color: var(--accent); font-weight: 600; }
+
+/* ── field list ───────────────────────────────────────────── */
+.fields { display: flex; flex-direction: column; gap: .55cqw; }
+.field { display: grid; grid-template-columns: 9.5cqw 1fr; gap: 1cqw; font-size: 1.34cqw; align-items: start; }
+.field .fk {
+  font-size: 1.08cqw; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); padding-top: .2cqw;
+}
+
+/* ── navigation chrome ────────────────────────────────────── */
+.progress {
+  position: absolute; top: 0; left: 0; height: .3cqw;
+  background: var(--accent);
+  transition: width .18s ease;
+  z-index: 5;
+}
+/* ── edge paging bars ─────────────────────────────────────────
+   Full-height hit targets at both margins: the pointer can sit
+   anywhere down the edge and still page. Faint until hovered so
+   they never compete with the slide. They stop short of the
+   notes tray, which owns the bottom of the viewport.        */
+.edge {
+  position: fixed; top: 0; bottom: 12rem;
+  width: clamp(46px, 6vw, 92px);
+  z-index: 15;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0; border: 0; background: transparent;
+  color: var(--muted); cursor: pointer;
+  opacity: .3;
+  transition: opacity .15s ease, background .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.edge.l { left: 0; }
+.edge.r { right: 0; }
+.edge:hover, .edge:focus-visible {
+  opacity: 1;
+  background: linear-gradient(to var(--dir), color-mix(in srgb, var(--accent) 10%, transparent), transparent);
+}
+.edge.l { --dir: right; }
+.edge.r { --dir: left; }
+.edge:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.edge svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2;
+            stroke-linecap: round; stroke-linejoin: round; }
+.edge:disabled { opacity: .08; cursor: default; background: none; }
+
+@media print { .edge { display: none !important; } }
+
+.nav {
+  position: fixed; right: 2.4vmin; bottom: 2.4vmin;
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 5px 6px 5px 14px;
+  box-shadow: var(--shadow);
+  z-index: 20;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.nav button {
+  font: inherit; font-size: 15px; line-height: 1;
+  width: 30px; height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.nav button:hover { background: var(--sunken); }
+.nav button:focus-visible, .idx li:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { position: fixed; left: 2.4vmin; bottom: 2.4vmin; font-size: 12px; color: var(--muted); z-index: 20; }
+.hint kbd {
+  font-family: var(--f-mono); font-size: 11px;
+  border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 3px; padding: 1px 5px; background: var(--surface); color: var(--ink);
+}
+
+.idx {
+  position: fixed; inset: 0; z-index: 30;
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  backdrop-filter: blur(6px);
+  display: none;
+  padding: 6vmin 8vmin;
+  overflow: auto;
+}
+.idx.is-open { display: block; }
+.idx h2 { font-size: 20px; margin-bottom: 16px; }
+.idx ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
+.idx li {
+  display: flex; gap: 12px; padding: 7px 8px; border-radius: 4px;
+  cursor: pointer; font-size: 14px; color: var(--ink-2);
+  break-inside: avoid;
+}
+.idx li:hover { background: var(--sunken); }
+.idx li .n { font-family: var(--f-mono); color: var(--accent); font-weight: 700; }
+.idx li.on { color: var(--accent); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ── print → one slide per page ───────────────────────────── */
+@page { size: A4 landscape; margin: 0; }
+
+@media print {
+  .nav, .hint, .idx, .progress { display: none !important; }
+  body { background: #fff; }
+  /* keep figure fills, badges and gradients — Chrome drops them otherwise */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  .deck { display: block; padding: 0; min-height: 0; }
+  .stage {
+    width: 100%; border: none; border-radius: 0; box-shadow: none;
+    aspect-ratio: auto; height: auto; container-type: normal;
+  }
+  .slide {
+    display: flex !important;
+    position: relative; inset: auto;
+    width: 297mm;
+    min-height: 210mm; height: auto;
+    padding: 12mm 14mm;
+    font-size: 10.5pt;
+    break-after: page; page-break-after: always;
+  }
+  .slide:last-child { break-after: auto; page-break-after: auto; }
+  h1 { font-size: 34pt; } h2 { font-size: 20pt; } h3 { font-size: 11pt; }
+  .lede { font-size: 13pt; } .eyebrow, .rail .num { font-size: 7.5pt; }
+  table { font-size: 9pt; } th { font-size: 7.5pt; }
+  .small, .step p, .card p { font-size: 8.6pt; }
+  figure { break-inside: avoid; page-break-inside: avoid; }
+  figure svg { max-height: 100mm; }
+}
+/* ── figures ──────────────────────────────────────────────── */
+figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: .9cqw;
+}
+figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--ink-2);
+}
+figcaption {
+  font-size: 1.15cqw;
+  color: var(--muted);
+  line-height: 1.45;
+}
+figcaption b { color: var(--ink-2); }
+.fig-t   { font-size: 13px; font-weight: 600; fill: var(--ink); }
+.fig-l   { font-size: 12px; fill: var(--ink-2); }
+.fig-s   { font-size: 11px; fill: var(--muted); }
+.fig-n   { font-size: 15px; font-weight: 700; fill: var(--ink); }
+.fig-box { fill: var(--sunken); stroke: var(--line); stroke-width: 1.2; }
+.fig-hi  { fill: var(--accent-w); stroke: var(--accent); stroke-width: 1.4; }
+.fig-bad { fill: var(--flag-w); stroke: var(--flag); stroke-width: 1.2; }
+.fig-ok  { fill: var(--ok-w); stroke: var(--ok); stroke-width: 1.2; }
+.fig-arw { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+.fig-dsh { stroke: var(--flag); stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; }
+.fig-ret { stroke: var(--accent); stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
+.fig-warn{ fill: var(--warn-w); stroke: var(--warn); stroke-width: 1.3; }
+.fig-grp { fill: none; stroke: var(--line); stroke-width: 1.2; }
+.fig-cap { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; fill: var(--muted); }
+.fig-div { stroke: var(--line); stroke-width: 1; }
+
+/* ── slide grows to its content ───────────────────────────────
+   The deck was locked to 16/9 with every slide absolutely
+   positioned inside it, so a slide carrying a diagram had to
+   shrink the diagram to fit the box. Screen presentation does not
+   need a fixed aspect: the stage now sizes to whichever slide is
+   showing, and `inline-size` keeps every `cqw` unit working.
+   Print still pins a landscape A4 page per slide.               */
+.stage {
+  aspect-ratio: auto;
+  min-height: min(86dvh, 54vw);
+  container-type: inline-size;
+}
+.slide {
+  position: relative;
+  inset: auto;
+  min-height: min(86dvh, 54vw);
+}
+.deck { align-items: start; padding: 2vmin 2vmin 8vmin; }
+
+/* ── room to breathe ──────────────────────────────────────────
+   Everything below assumes the stage above is no longer pinned
+   to 16/9, so content sets the height instead of fighting for
+   room inside it.                                              */
+
+/* `.steps` was `repeat(7, 1fr)` for a seven-step slide in the
+   deck this style came from. Four steps in a seven-column grid
+   occupy four sevenths of the width and read as an accident. */
+.steps { grid-template-columns: repeat(auto-fit, minmax(14cqw, 1fr)); gap: 1.4cqw; }
+
+/* No horizontal scrollbar under a table. A DAB table that has to
+   be dragged sideways to be read has lost the argument it was
+   making — let the cells wrap and the slide grow instead. */
+.tbl-wrap { overflow-x: visible; }
+th { white-space: normal; }
+table { font-size: 1.42cqw; }
+th, td { padding: .95cqw 1cqw; }
+
+/* Base type, now that height is not rationed. */
+.slide { font-size: 1.68cqw; padding: 4cqw 5cqw 5cqw; }
+.lede  { max-width: 74cqw; }
+.card p { font-size: 1.42cqw; }
+.note { font-size: 1.46cqw; }
+figcaption { font-size: 1.3cqw; max-width: 82cqw; }
+.stack { gap: 2.4cqw; }
+
+/* ── speaker notes tray ───────────────────────────────────────
+   Read-only by default so ← / → keep paging the deck; the pencil
+   switches one slide's note into an editable field, and only then
+   does the keyboard belong to the text. Edits persist in
+   localStorage, so a rehearsal edit survives a reload.          */
+.notes {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 40;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -6px 24px rgba(15,23,23,.10);
+  font-family: var(--f-sans);
+  transition: transform .18s ease;
+}
+:root:not([data-theme="light"]) .notes { box-shadow: 0 -6px 24px rgba(0,0,0,.34); }
+.notes.is-closed { transform: translateY(calc(100% - 2.3rem)); }
+
+.notes-bar {
+  display: flex; align-items: center; gap: .7rem;
+  padding: .4rem .9rem;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: .78rem;
+}
+.notes-bar .lbl {
+  font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); font-size: .66rem;
+  cursor: pointer; user-select: none;
+}
+.notes-bar .build { font-family: var(--f-mono); font-weight: 600;
+  letter-spacing: 0; text-transform: none; color: var(--accent); }
+.notes-bar .hintline { flex: 1 1 auto; color: var(--muted); font-size: .72rem; }
+.notes-bar kbd {
+  font-family: var(--f-mono); font-size: .68rem;
+  border: 1px solid var(--line); border-bottom-width: 2px;
+  border-radius: 3px; padding: 0 .3rem; color: var(--ink-2);
+}
+.notes-bar button {
+  font: inherit; font-size: .74rem;
+  display: inline-flex; align-items: center; gap: .3rem;
+  background: var(--sunken); color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: 4px;
+  padding: .22rem .6rem; cursor: pointer;
+}
+.notes-bar button:hover { border-color: var(--accent); color: var(--accent); }
+.notes-bar button svg { width: .85em; height: .85em; fill: none; stroke: currentColor; stroke-width: 1.8; }
+
+.notes-body {
+  padding: .8rem 1rem 1rem;
+  font-size: .88rem; line-height: 1.62; color: var(--ink-2);
+  height: 8.5rem; overflow-y: auto;
+  white-space: pre-wrap;
+}
+.notes textarea {
+  display: none;
+  width: 100%; height: 8.5rem; resize: vertical;
+  border: 0; outline: 0;
+  padding: .8rem 1rem 1rem;
+  background: var(--sunken); color: var(--ink);
+  font-family: var(--f-sans); font-size: .88rem; line-height: 1.62;
+}
+.notes.is-editing .notes-body { display: none; }
+.notes.is-editing textarea  { display: block; }
+.notes.is-editing .notes-bar { border-bottom-color: var(--accent); }
+
+/* keep the last line of a slide clear of the tray */
+.deck { padding-bottom: 13rem; }
+
+@media print {
+  .notes { display: none !important; }
+  .deck { padding-bottom: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="deck">
+<div class="stage" id="stage">
+<div class="progress" id="progress"></div>
+<svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="var(--muted)"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="var(--accent)"/>
+    </marker>
+    <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="var(--flag)"/>
+    </marker>
+    <linearGradient id="gemg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#4285F4"/>
+      <stop offset="52%"  stop-color="#9B72CB"/>
+      <stop offset="100%" stop-color="#D96570"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<!-- ═══ COVER ═══════════════════════════════════════════════ -->
+<section class="slide title-slide" data-title="Cover">
+  <div class="title-mark"></div>
+  <h1>Virtual QC on Agent Sentiment — version 2</h1>
+  <p class="lede">Go-live submission for the pipeline that scores the Agent Attitude criterion on collection calls.</p>
+  <div class="title-meta">
+    <span>Design and Architecture Board</span>
+    <span>September 2026</span>
+  </div>
+</section>
+
+<!-- ═══ 01 · THE PROBLEM ════════════════════════════════════ -->
+<section class="slide" data-title="The problem">
+  <div class="rail"><span class="eyebrow">The problem</span><span class="num">01 / 08</span></div>
+  <div class="stack">
+    <h2>Screening 15,000–30,000 collection calls a day for compliance</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 412" role="img" aria-label="Left: 15 to 30 thousand collection calls are recorded every working day, of which manual review reaches only a small fraction. Right: two real minimal pairs from the policy corpus, where a single added phrase flips the verdict. Bottom: the corpus holds 919 entries expanded into 1,611 phrase variants, of which 904 are carve-outs.">
+        <text class="fig-s" x="8" y="20">EVERY WORKING DAY</text>
+        <text x="8" y="66" font-size="34" font-weight="700" fill="var(--ink)">15,000 &#8211; 30,000</text>
+        <text class="fig-l" x="8" y="88">collection calls recorded</text>
+
+        <g fill="var(--sunken)" stroke="var(--line)" stroke-width="1">
+          <rect x="8"   y="108" width="8" height="8" rx="1"/><rect x="19"  y="108" width="8" height="8" rx="1"/>
+          <rect x="30"  y="108" width="8" height="8" rx="1"/><rect x="41"  y="108" width="8" height="8" rx="1"/>
+          <rect x="52"  y="108" width="8" height="8" rx="1"/><rect x="63"  y="108" width="8" height="8" rx="1"/>
+          <rect x="74"  y="108" width="8" height="8" rx="1"/><rect x="85"  y="108" width="8" height="8" rx="1"/>
+          <rect x="96"  y="108" width="8" height="8" rx="1"/><rect x="107" y="108" width="8" height="8" rx="1"/>
+          <rect x="118" y="108" width="8" height="8" rx="1"/><rect x="129" y="108" width="8" height="8" rx="1"/>
+          <rect x="140" y="108" width="8" height="8" rx="1"/><rect x="151" y="108" width="8" height="8" rx="1"/>
+          <rect x="162" y="108" width="8" height="8" rx="1"/><rect x="173" y="108" width="8" height="8" rx="1"/>
+          <rect x="184" y="108" width="8" height="8" rx="1"/><rect x="195" y="108" width="8" height="8" rx="1"/>
+          <rect x="206" y="108" width="8" height="8" rx="1"/><rect x="217" y="108" width="8" height="8" rx="1"/>
+          <rect x="228" y="108" width="8" height="8" rx="1"/><rect x="239" y="108" width="8" height="8" rx="1"/>
+          <rect x="250" y="108" width="8" height="8" rx="1"/><rect x="261" y="108" width="8" height="8" rx="1"/>
+          <rect x="8"   y="119" width="8" height="8" rx="1"/><rect x="19"  y="119" width="8" height="8" rx="1"/>
+          <rect x="30"  y="119" width="8" height="8" rx="1"/><rect x="41"  y="119" width="8" height="8" rx="1"/>
+          <rect x="52"  y="119" width="8" height="8" rx="1"/><rect x="63"  y="119" width="8" height="8" rx="1"/>
+          <rect x="74"  y="119" width="8" height="8" rx="1"/><rect x="85"  y="119" width="8" height="8" rx="1"/>
+          <rect x="96"  y="119" width="8" height="8" rx="1"/><rect x="107" y="119" width="8" height="8" rx="1"/>
+          <rect x="118" y="119" width="8" height="8" rx="1"/><rect x="129" y="119" width="8" height="8" rx="1"/>
+          <rect x="140" y="119" width="8" height="8" rx="1"/><rect x="151" y="119" width="8" height="8" rx="1"/>
+          <rect x="162" y="119" width="8" height="8" rx="1"/><rect x="173" y="119" width="8" height="8" rx="1"/>
+          <rect x="184" y="119" width="8" height="8" rx="1"/><rect x="195" y="119" width="8" height="8" rx="1"/>
+          <rect x="206" y="119" width="8" height="8" rx="1"/><rect x="217" y="119" width="8" height="8" rx="1"/>
+          <rect x="228" y="119" width="8" height="8" rx="1"/><rect x="239" y="119" width="8" height="8" rx="1"/>
+          <rect x="250" y="119" width="8" height="8" rx="1"/><rect x="261" y="119" width="8" height="8" rx="1"/>
+          <rect x="8"   y="130" width="8" height="8" rx="1"/><rect x="19"  y="130" width="8" height="8" rx="1"/>
+          <rect x="30"  y="130" width="8" height="8" rx="1"/><rect x="41"  y="130" width="8" height="8" rx="1"/>
+          <rect x="52"  y="130" width="8" height="8" rx="1"/><rect x="63"  y="130" width="8" height="8" rx="1"/>
+          <rect x="74"  y="130" width="8" height="8" rx="1"/><rect x="85"  y="130" width="8" height="8" rx="1"/>
+          <rect x="96"  y="130" width="8" height="8" rx="1"/><rect x="107" y="130" width="8" height="8" rx="1"/>
+          <rect x="118" y="130" width="8" height="8" rx="1"/><rect x="129" y="130" width="8" height="8" rx="1"/>
+          <rect x="140" y="130" width="8" height="8" rx="1"/><rect x="151" y="130" width="8" height="8" rx="1"/>
+          <rect x="162" y="130" width="8" height="8" rx="1"/><rect x="173" y="130" width="8" height="8" rx="1"/>
+          <rect x="184" y="130" width="8" height="8" rx="1"/><rect x="195" y="130" width="8" height="8" rx="1"/>
+          <rect x="206" y="130" width="8" height="8" rx="1"/><rect x="217" y="130" width="8" height="8" rx="1"/>
+          <rect x="228" y="130" width="8" height="8" rx="1"/><rect x="239" y="130" width="8" height="8" rx="1"/>
+          <rect x="250" y="130" width="8" height="8" rx="1"/><rect x="261" y="130" width="8" height="8" rx="1"/>
+          <rect x="8"   y="141" width="8" height="8" rx="1"/><rect x="19"  y="141" width="8" height="8" rx="1"/>
+          <rect x="30"  y="141" width="8" height="8" rx="1"/><rect x="41"  y="141" width="8" height="8" rx="1"/>
+          <rect x="52"  y="141" width="8" height="8" rx="1"/><rect x="63"  y="141" width="8" height="8" rx="1"/>
+          <rect x="74"  y="141" width="8" height="8" rx="1"/><rect x="85"  y="141" width="8" height="8" rx="1"/>
+          <rect x="96"  y="141" width="8" height="8" rx="1"/><rect x="107" y="141" width="8" height="8" rx="1"/>
+          <rect x="118" y="141" width="8" height="8" rx="1"/><rect x="129" y="141" width="8" height="8" rx="1"/>
+          <rect x="140" y="141" width="8" height="8" rx="1"/><rect x="151" y="141" width="8" height="8" rx="1"/>
+          <rect x="162" y="141" width="8" height="8" rx="1"/><rect x="173" y="141" width="8" height="8" rx="1"/>
+          <rect x="184" y="141" width="8" height="8" rx="1"/><rect x="195" y="141" width="8" height="8" rx="1"/>
+          <rect x="206" y="141" width="8" height="8" rx="1"/><rect x="217" y="141" width="8" height="8" rx="1"/>
+          <rect x="228" y="141" width="8" height="8" rx="1"/><rect x="239" y="141" width="8" height="8" rx="1"/>
+          <rect x="250" y="141" width="8" height="8" rx="1"/><rect x="261" y="141" width="8" height="8" rx="1"/>
+        </g>
+        <g class="fig-hi">
+          <rect x="8"  y="108" width="8" height="8" rx="1"/><rect x="19" y="108" width="8" height="8" rx="1"/>
+          <rect x="8"  y="119" width="8" height="8" rx="1"/>
+        </g>
+        <rect class="fig-hi" x="8" y="166" width="10" height="10" rx="2"/>
+        <text class="fig-s" x="26" y="175">what manual review can sample</text>
+        <text class="fig-s" x="8" y="200" fill="var(--flag)">everything else is judged by the system &#8212; or by nobody</text>
+
+        <line x1="316" y1="8" x2="316" y2="256" stroke="var(--line)" stroke-width="1"/>
+
+        <text class="fig-t" x="336" y="20">Why the judgement is hard &#8212; two real pairs from the policy corpus</text>
+
+        <text class="fig-s" x="336" y="42">STEERING THE CALL</text>
+        <rect class="fig-ok" x="336" y="50" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="71">&#8220;anh ch&#7883; b&#236;nh t&#297;nh trao &#273;&#7893;i &#273;&#432;&#7907;c kh&#244;ng&#8221;</text>
+        <text class="fig-s" x="1000" y="71" text-anchor="end" fill="var(--ok)">NOT A VIOLATION</text>
+        <rect class="fig-bad" x="336" y="86" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="107">&#8220;anh c&#243; trao &#273;&#7893;i l&#7883;ch s&#7921; &#273;&#432;&#7907;c kh&#244;ng &#7841;&#8221;</text>
+        <text class="fig-s" x="1000" y="107" text-anchor="end" fill="var(--flag)">VIOLATION &#183; warning</text>
+        <text class="fig-s" x="348" y="132" fill="var(--muted)">Same sentence frame, one word swapped. Steering the customer to stay calm is allowed;</text>
+        <text class="fig-s" x="348" y="148" fill="var(--muted)">asking whether they can be polite judges their manners.</text>
+
+        <text class="fig-s" x="336" y="166">ENDING THE CALL</text>
+        <rect class="fig-ok" x="336" y="174" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="195">&#8220;n&#7871;u nh&#432; anh kh&#244;ng trao &#273;&#7893;i l&#7883;ch s&#7921; th&#236; em xin ph&#233;p ng&#7855;t m&#225;y&#8221;</text>
+        <text class="fig-s" x="1000" y="195" text-anchor="end" fill="var(--ok)">NOT A VIOLATION</text>
+        <rect class="fig-bad" x="336" y="210" width="676" height="32" rx="4"/>
+        <text class="fig-l" x="348" y="231">&#8220;n&#7871;u m&#224; anh b&#7845;t l&#7883;ch s&#7921; th&#236; em xin ph&#233;p ng&#7855;t m&#225;y&#8221;</text>
+        <text class="fig-s" x="1000" y="231" text-anchor="end" fill="var(--flag)">VIOLATION &#183; warning</text>
+        <text class="fig-s" x="348" y="260" fill="var(--muted)">One word. &#8216;kh&#244;ng l&#7883;ch s&#7921;&#8217; states a condition for ending the call; &#8216;b&#7845;t l&#7883;ch s&#7921;&#8217; puts a label on the person.</text>
+
+        <line x1="8" y1="278" x2="1012" y2="278" stroke="var(--line)" stroke-width="1"/>
+
+        <text class="fig-t" x="8" y="302">The rulebook QC maintains today</text>
+        <rect class="fig-bad" x="8" y="314" width="328" height="56" rx="4"/>
+        <text class="fig-n" x="172" y="338" text-anchor="middle">421 entries &#183; 707 variants</text>
+        <text class="fig-s" x="172" y="357" text-anchor="middle">violation examples</text>
+        <rect class="fig-ok" x="348" y="314" width="328" height="56" rx="4"/>
+        <text class="fig-n" x="512" y="338" text-anchor="middle">498 entries &#183; 904 variants</text>
+        <text class="fig-s" x="512" y="357" text-anchor="middle">carve-outs &#8212; explicitly not violations</text>
+        <rect class="fig-box" x="688" y="314" width="324" height="56" rx="4"/>
+        <text class="fig-n" x="850" y="338" text-anchor="middle">919 entries &#183; 1,611 variants</text>
+        <text class="fig-s" x="850" y="357" text-anchor="middle">in force across 81 categories</text>
+        <text class="fig-s" x="8" y="396" fill="var(--flag)">Carve-outs outnumber violations &#8212; most of the business effort goes into stating what is NOT a violation. All of it ships inside the software package today.</text>
+      </svg>
+      <figcaption>Three properties define the problem: the <b>volume</b> exceeds manual review, the <b>verdict turns on a word or two of context</b>, and the <b>rulebook changes continuously</b>. Samples above are verbatim from <span class="mono">corpus.yaml</span>.</figcaption>
+    </figure>
+
+    <div class="g3">
+      <div class="card on-flag">
+        <span class="tag t-flag">Cost of a false alarm</span>
+        <p>QC time spent on a clean call. If the flag survives review, an agent carries a mark for something that did not happen.</p>
+      </div>
+      <div class="card on-flag">
+        <span class="tag t-flag">Cost of a miss</span>
+        <p>Compliance exposure — and it is <b>silent</b>. No queue entry, no record, no signal that anything was missed.</p>
+      </div>
+      <div class="card on-warn">
+        <span class="tag t-warn">Cost of slow rules</span>
+        <p>QC owns the judgement but not the rulebook. Every correction they want is a development and release cycle.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 02 · PRODUCTION TODAY ═══════════════════════════════ -->
+<section class="slide" data-title="Production today">
+  <div class="rail"><span class="eyebrow">Baseline · what runs on live</span><span class="num">02 / 08</span></div>
+  <div class="stack">
+    <h2>Production today: one prompt, with the whole rulebook pasted in</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 452" role="img" aria-label="The live pipeline read top to bottom, with the same layout as the proposed pipeline. A gates row of silent, short-call and kid check, which can exit to no violation; then step one, a detector prompt carrying the whole 15-code taxonomy; then step two, a verifier that sees only the exception clauses filed under the code the detector assigned, never the rules that define a violation, and can only remove a flag. Kid check, detector and verifier each run on Claude 4 Sonnet. There is no retrieval anywhere in the flow. The output block at the bottom carries a violation flag, a category of high or critical, the quoted evidence turn and the reasoning text.">
+        <text class="fig-s" x="8" y="24" fill="var(--flag)">No retrieval anywhere in the flow &#183; the knowledge is text inside the prompt</text>
+
+        <text class="fig-s" x="8" y="74" fill="var(--muted)">GATES</text>
+        <text class="fig-s" x="8" y="90">cheap exits</text>
+        <rect class="fig-box" x="126" y="56" width="534" height="52" rx="5"/>
+        <rect class="fig-box" x="136" y="68" width="150" height="28" rx="3"/>
+        <text class="fig-s" x="211" y="86" text-anchor="middle">silent</text>
+        <rect class="fig-box" x="298" y="68" width="150" height="28" rx="3"/>
+        <text class="fig-s" x="373" y="86" text-anchor="middle">short-call</text>
+        <rect x="460" y="68" width="190" height="28" rx="3" fill="color-mix(in srgb, #D97757 12%, var(--surface))" stroke="#D97757" stroke-opacity="0.6" stroke-width="1.1"/>
+        <g transform="translate(470,75)" stroke="#D97757" stroke-width="2.3" stroke-linecap="round" fill="none"><path d="M7 1.1 L7 12.9"/><path d="M1.9 4.05 L12.1 9.95"/><path d="M1.9 9.95 L12.1 4.05"/></g>
+        <text class="fig-s" x="492" y="86" fill="var(--ink-2)">kid check &#183; Sonnet</text>
+        <path class="fig-dsh" d="M664,82 L686,82" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="690" y="56" width="322" height="52" rx="5"/>
+        <text class="fig-l" x="851" y="87" text-anchor="middle">No violation &#8212; not scored</text>
+        <text class="fig-s" x="126" y="126" fill="var(--muted)">silent and short-call are deterministic; these gates carry over unchanged into the proposal.</text>
+
+        <line class="fig-arw" x1="393" y1="134" x2="393" y2="152" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="176" fill="var(--muted)">STEP 1</text>
+        <text class="fig-s" x="8" y="192">detector &#8212; decides</text>
+        <rect class="fig-bad" x="126" y="156" width="534" height="56" rx="5"/>
+        <text class="fig-l" x="140" y="180">Detector &#8212; one prompt, the whole taxonomy inline</text>
+        <text class="fig-s" x="140" y="199">15 codes with their trigger phrases &#183; assigns one</text>
+        <rect x="516" y="172" width="132" height="24" rx="3" fill="color-mix(in srgb, #D97757 12%, var(--surface))" stroke="#D97757" stroke-opacity="0.6" stroke-width="1.1"/>
+        <g transform="translate(524,177)" stroke="#D97757" stroke-width="2.3" stroke-linecap="round" fill="none"><path d="M7 1.1 L7 12.9"/><path d="M1.9 4.05 L12.1 9.95"/><path d="M1.9 9.95 L12.1 4.05"/></g>
+        <text class="fig-s" x="546" y="189" fill="var(--ink-2)">Sonnet</text>
+
+        <line class="fig-arw" x1="393" y1="212" x2="393" y2="232" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="258" fill="var(--flag)">STEP 2</text>
+        <text class="fig-s" x="8" y="274">verifier &#8212; veto only</text>
+        <rect class="fig-bad" x="126" y="236" width="534" height="64" rx="5"/>
+        <text class="fig-t" x="140" y="262">Verifier &#8212; only the exception clauses for that one code</text>
+        <text class="fig-s" x="140" y="283">29 clauses across 15 codes &#183; not the rules defining the violation</text>
+        <rect x="516" y="256" width="132" height="24" rx="3" fill="color-mix(in srgb, #D97757 12%, var(--surface))" stroke="#D97757" stroke-opacity="0.6" stroke-width="1.1"/>
+        <g transform="translate(524,261)" stroke="#D97757" stroke-width="2.3" stroke-linecap="round" fill="none"><path d="M7 1.1 L7 12.9"/><path d="M1.9 4.05 L12.1 9.95"/><path d="M1.9 9.95 L12.1 4.05"/></g>
+        <text class="fig-s" x="546" y="273" fill="var(--ink-2)">Sonnet</text>
+
+        <line class="fig-arw" x1="393" y1="300" x2="393" y2="320" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="352" fill="var(--muted)">OUTPUT</text>
+        <text class="fig-s" x="8" y="368">per call</text>
+        <rect class="fig-box" x="126" y="324" width="886" height="88" rx="5"/>
+        <text class="fig-t" x="140" y="344">Final verdict</text>
+        <line class="fig-div" x1="126" y1="352" x2="1012" y2="352"/>
+        <line class="fig-div" x1="126" y1="382" x2="1012" y2="382"/>
+        <line class="fig-div" x1="430" y1="352" x2="430" y2="412"/>
+
+        <text class="fig-cap" x="140" y="372">VIOLATION</text>
+        <rect class="fig-box" x="232" y="359" width="52" height="17" rx="3"/>
+        <text class="fig-s" x="258" y="372" text-anchor="middle">yes / no</text>
+
+        <text class="fig-cap" x="140" y="402">CATEGORY</text>
+        <rect class="fig-bad" x="232" y="389" width="40" height="17" rx="3"/>
+        <text class="fig-s" x="252" y="402" text-anchor="middle">high</text>
+        <rect class="fig-bad" x="278" y="389" width="54" height="17" rx="3"/>
+        <text class="fig-s" x="305" y="402" text-anchor="middle">critical</text>
+
+        <text class="fig-cap" x="444" y="372">EVIDENCE</text>
+        <text class="fig-s" x="516" y="372">the agent turn that triggered it, quoted with its timestamp</text>
+        <text class="fig-cap" x="444" y="402">REASONING</text>
+        <text class="fig-s" x="516" y="402">the detector&#8217;s own wording, unedited</text>
+
+        <text class="fig-s" x="8" y="436" fill="var(--muted)">The detector decides. The verifier can only remove a flag, never add one &#8212; so a violation the detector misses is final.</text>
+      </svg>
+      <figcaption>The defect is structural, not a shortfall of tuning — and not a matter of model tier either: live already runs the strongest model on every stage.</figcaption>
+    </figure>
+
+    <div class="note">
+      <strong>And the rules ship with the code.</strong> Both prompts are files inside the software package, so a QC wording change is a software release. The rulebook cannot keep pace with the floor.
+    </div>
+      </div>
+</section>
+
+<!-- ═══ 03 · PROPOSED ═══════════════════════════════════════ -->
+<section class="slide" data-title="Proposed pipeline">
+  <div class="rail"><span class="eyebrow">Proposed · measured under UAT</span><span class="num">03 / 08</span></div>
+  <div class="stack">
+    <h2>Retrieve the relevant policy first, then decide</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 596" role="img" aria-label="The proposed pipeline as three filter layers followed by one verification pass. Layer one is cheap gates: silent, bot check, short-call and kid check. Layer two is the scanner, which sweeps the transcript with generic violation rules and returns candidate turns. An attribution and hallucination check follows. Layer three is the filter decider, which reads two retrieved pools and leans to recall. The primary decider then re-tests the same candidate with the same retrieval on a stronger model and tightens precision. Soften rewrites the wording only. Both decider stages read the same Postgres pgvector knowledge base. The output block at the bottom carries a violation flag, a category of warning, high or critical, the quoted evidence turn and the softened reasoning.">
+        <text class="fig-s" x="8" y="20">Three filter layers, then one verification pass &#8212; both decider stages read the same retrieved pools</text>
+
+        <text class="fig-s" x="8" y="74" fill="var(--muted)">FILTER 1</text>
+        <text class="fig-s" x="8" y="90">cheap gates</text>
+        <rect class="fig-box" x="126" y="56" width="534" height="52" rx="5"/>
+        <rect class="fig-box" x="136" y="68" width="104" height="28" rx="3"/>
+        <text class="fig-s" x="188" y="86" text-anchor="middle">silent</text>
+        <rect class="fig-ok"  x="248" y="68" width="118" height="28" rx="3"/>
+        <text class="fig-s" x="307" y="86" text-anchor="middle">bot check</text>
+        <rect class="fig-box" x="374" y="68" width="112" height="28" rx="3"/>
+        <text class="fig-s" x="430" y="86" text-anchor="middle">short-call</text>
+        <rect x="494" y="68" width="156" height="28" rx="3" fill="color-mix(in srgb, #4285F4 12%, var(--surface))" stroke="#4285F4" stroke-opacity="0.6" stroke-width="1.1"/>
+        <path d="M12 1.6 C12 7.4 16.6 12 22.4 12 C16.6 12 12 16.6 12 22.4 C12 16.6 7.4 12 1.6 12 C7.4 12 12 7.4 12 1.6 Z" fill="url(#gemg)" transform="translate(504,75) scale(0.583)"/>
+        <text class="fig-s" x="524" y="86" fill="var(--ink-2)">kid check &#183; Flash</text>
+        <text class="fig-s" x="126" y="126" fill="var(--muted)">silent, bot check and short-call are deterministic &#8212; no model call in this layer except kid check.</text>
+        <path class="fig-dsh" d="M664,82 L686,82" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="690" y="56" width="322" height="52" rx="5"/>
+        <text class="fig-l" x="851" y="87" text-anchor="middle">Exit &#8212; no violation scored</text>
+
+        <line class="fig-arw" x1="393" y1="134" x2="393" y2="152" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="176" fill="var(--muted)">FILTER 2</text>
+        <text class="fig-s" x="8" y="192">scanner</text>
+        <rect class="fig-box" x="126" y="156" width="534" height="52" rx="5"/>
+        <text class="fig-l" x="140" y="178">Scanner &#8212; generic violation rules</text>
+        <text class="fig-s" x="140" y="196">sweeps the transcript, returns candidate turns</text>
+        <rect x="516" y="170" width="132" height="24" rx="4" fill="color-mix(in srgb, #4285F4 12%, var(--surface))" stroke="#4285F4" stroke-opacity="0.6" stroke-width="1.1"/>
+        <path d="M12 1.6 C12 7.4 16.6 12 22.4 12 C16.6 12 12 16.6 12 22.4 C12 16.6 7.4 12 1.6 12 C7.4 12 12 7.4 12 1.6 Z" fill="url(#gemg)" transform="translate(524,175) scale(0.583)"/>
+        <text class="fig-s" x="546" y="186" fill="var(--ink-2)">Gemini 3 Flash</text>
+
+        <line class="fig-arw" x1="393" y1="208" x2="393" y2="226" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="250" fill="var(--muted)">EVIDENCE</text>
+        <text class="fig-s" x="8" y="266">integrity</text>
+        <rect class="fig-box" x="126" y="230" width="534" height="48" rx="5"/>
+        <text class="fig-l" x="140" y="250">Attribution &#183; halu check</text>
+        <text class="fig-s" x="140" y="268">the quoted turn must belong to the agent and exist in the transcript</text>
+        <rect x="516" y="242" width="132" height="24" rx="4" fill="color-mix(in srgb, #4285F4 12%, var(--surface))" stroke="#4285F4" stroke-opacity="0.6" stroke-width="1.1"/>
+        <path d="M12 1.6 C12 7.4 16.6 12 22.4 12 C16.6 12 12 16.6 12 22.4 C12 16.6 7.4 12 1.6 12 C7.4 12 12 7.4 12 1.6 Z" fill="url(#gemg)" transform="translate(524,247) scale(0.583)"/>
+        <text class="fig-s" x="546" y="258" fill="var(--ink-2)">Flash (high)</text>
+
+        <line class="fig-arw" x1="393" y1="278" x2="393" y2="296" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="324" fill="var(--accent)">FILTER 3</text>
+        <text class="fig-s" x="8" y="340">filter decider</text>
+        <rect class="fig-hi" x="126" y="300" width="534" height="56" rx="5"/>
+        <text class="fig-l" x="140" y="322">Filter decider &#8212; reads both retrieved pools in one pass</text>
+        <text class="fig-s" x="140" y="342">leans to recall: keeps a candidate unless the corpus excludes it</text>
+        <rect x="516" y="316" width="132" height="24" rx="4" fill="color-mix(in srgb, #4285F4 12%, var(--surface))" stroke="#4285F4" stroke-opacity="0.6" stroke-width="1.1"/>
+        <path d="M12 1.6 C12 7.4 16.6 12 22.4 12 C16.6 12 12 16.6 12 22.4 C12 16.6 7.4 12 1.6 12 C7.4 12 12 7.4 12 1.6 Z" fill="url(#gemg)" transform="translate(524,321) scale(0.583)"/>
+        <text class="fig-s" x="546" y="332" fill="var(--ink-2)">Flash (high)</text>
+
+        <line class="fig-arw" x1="393" y1="356" x2="393" y2="374" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="402" fill="var(--accent)">VERIFY</text>
+        <text class="fig-s" x="8" y="418">primary decider</text>
+        <rect class="fig-hi" x="126" y="378" width="534" height="56" rx="5"/>
+        <text class="fig-l" x="140" y="400">Primary decider &#8212; same retrieval, stronger model, stricter test</text>
+        <text class="fig-s" x="140" y="420">tightens precision: clears flags the filter decider let through</text>
+        <rect x="516" y="394" width="132" height="24" rx="4" fill="color-mix(in srgb, #D97757 12%, var(--surface))" stroke="#D97757" stroke-opacity="0.6" stroke-width="1.1"/>
+        <g transform="translate(524,399)" stroke="#D97757" stroke-width="2.3" stroke-linecap="round" fill="none"><path d="M7 1.1 L7 12.9"/><path d="M1.9 4.05 L12.1 9.95"/><path d="M1.9 9.95 L12.1 4.05"/></g>
+        <text class="fig-s" x="546" y="410" fill="var(--ink-2)">Claude 4 Sonnet</text>
+
+        <rect class="fig-hi" x="690" y="300" width="322" height="134" rx="5"/>
+        <text class="fig-t" x="851" y="336" text-anchor="middle">Knowledge base</text>
+        <text class="fig-s" x="851" y="356" text-anchor="middle">Postgres + pgvector &#8212; next slide</text>
+        <text class="fig-s" x="851" y="382" text-anchor="middle">per candidate turn, two pools:</text>
+        <text class="fig-s" x="851" y="400" text-anchor="middle">top-K violations + top-K carve-outs</text>
+        <text class="fig-s" x="851" y="422" text-anchor="middle" fill="var(--accent)">both stages read the same pools</text>
+        <path class="fig-arw" d="M686,328 L664,328" marker-end="url(#a1)" stroke-dasharray="4 3"/>
+        <path class="fig-arw" d="M686,406 L664,406" marker-end="url(#a1)" stroke-dasharray="4 3"/>
+
+        <line class="fig-arw" x1="393" y1="434" x2="393" y2="452" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="478" fill="var(--muted)">WORDING</text>
+        <rect class="fig-box" x="126" y="456" width="534" height="26" rx="5"/>
+        <text class="fig-s" x="140" y="473">Soften &#8212; rewrites the reason. Never changes the verdict.</text>
+        <rect x="516" y="458" width="132" height="22" rx="4" fill="color-mix(in srgb, #4285F4 12%, var(--surface))" stroke="#4285F4" stroke-opacity="0.6" stroke-width="1.1"/>
+        <path d="M12 1.6 C12 7.4 16.6 12 22.4 12 C16.6 12 12 16.6 12 22.4 C12 16.6 7.4 12 1.6 12 C7.4 12 12 7.4 12 1.6 Z" fill="url(#gemg)" transform="translate(524,462) scale(0.583)"/>
+        <text class="fig-s" x="546" y="473" fill="var(--ink-2)">Gemini 3 Flash</text>
+        <line class="fig-arw" x1="393" y1="482" x2="393" y2="500" marker-end="url(#a1)"/>
+
+        <text class="fig-s" x="8" y="534" fill="var(--accent)">OUTPUT</text>
+        <text class="fig-s" x="8" y="550">per call</text>
+        <rect class="fig-hi" x="126" y="504" width="886" height="88" rx="5"/>
+        <text class="fig-t" x="140" y="524">Final verdict</text>
+        <line class="fig-div" x1="126" y1="532" x2="1012" y2="532"/>
+        <line class="fig-div" x1="126" y1="562" x2="1012" y2="562"/>
+        <line class="fig-div" x1="430" y1="532" x2="430" y2="592"/>
+
+        <text class="fig-cap" x="140" y="552">VIOLATION</text>
+        <rect class="fig-box" x="232" y="539" width="52" height="17" rx="3"/>
+        <text class="fig-s" x="258" y="552" text-anchor="middle">yes / no</text>
+
+        <text class="fig-cap" x="140" y="582">CATEGORY</text>
+        <rect class="fig-warn" x="232" y="569" width="60" height="17" rx="3"/>
+        <text class="fig-s" x="262" y="582" text-anchor="middle">warning</text>
+        <rect class="fig-bad" x="298" y="569" width="40" height="17" rx="3"/>
+        <text class="fig-s" x="318" y="582" text-anchor="middle">high</text>
+        <rect class="fig-bad" x="344" y="569" width="54" height="17" rx="3"/>
+        <text class="fig-s" x="371" y="582" text-anchor="middle">critical</text>
+
+        <text class="fig-cap" x="444" y="552">EVIDENCE</text>
+        <text class="fig-s" x="516" y="552">the agent turn that triggered it, quoted with its timestamp</text>
+        <text class="fig-cap" x="444" y="582">REASONING</text>
+        <text class="fig-s" x="516" y="582">one sentence naming what the turn breaks &#8212; softened, verdict untouched</text>
+      </svg>
+      <figcaption>Each layer removes candidates the next one would otherwise have to judge. The <b>filter decider</b> is tuned for recall — it would rather pass a doubtful case on than drop it — and the <b>primary decider</b> re-tests that case on a stronger model against the same corpus evidence, which is where precision is won. <b>New in this release:</b> bot check, two-pool retrieval, the primary decider, and soften.</figcaption>
+    </figure>
+      </div>
+</section>
+
+<!-- ═══ 04 · KNOWLEDGE BASE ═════════════════════════════════ -->
+<section class="slide" data-title="Knowledge base">
+  <div class="rail"><span class="eyebrow">Architecture · knowledge base</span><span class="num">04 / 08</span></div>
+  <div class="stack">
+    <h2>The knowledge base moves into Postgres + pgvector</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 400" role="img" aria-label="Ingest reads the QC-authored corpus, embeds it with BGE-M3 and upserts into Postgres. The schema holds a policy group table, a policy entry table carrying severity and a batch id, and two vector tables with HNSW indexes, 707 violation vectors and 904 carve-out vectors. At runtime the sentence under review is embedded and searched against those indexes to build the two pools the Decider reads. A QC edit is re-ingested and live on the next batch, and a startup check refuses to run when the store and the corpus disagree.">
+        <text class="fig-s" x="8" y="18">AUTHORING · INGEST</text>
+        <rect class="fig-box" x="8" y="32" width="128" height="52" rx="5"/>
+        <text class="fig-s" x="72" y="54" text-anchor="middle">corpus.yaml</text>
+        <text class="fig-s" x="72" y="71" text-anchor="middle">QC-authored</text>
+        <line class="fig-arw" x1="140" y1="58" x2="158" y2="58" marker-end="url(#a1)"/>
+        <rect class="fig-hi" x="164" y="26" width="168" height="64" rx="5"/>
+        <text class="fig-t" x="248" y="50" text-anchor="middle">Ingest</text>
+        <text class="fig-s" x="248" y="68" text-anchor="middle">parse · embed via Triton</text>
+        <text class="fig-s" x="248" y="82" text-anchor="middle">upsert · prune</text>
+        <path class="fig-arw" d="M336,58 L348,58 L348,70 L364,70" marker-end="url(#a1)"/>
+
+        <rect x="368" y="26" width="356" height="248" rx="7" fill="none" stroke="var(--accent)" stroke-width="1.4"/>
+        <text class="fig-t" x="384" y="48" fill="var(--accent)">Postgres + pgvector</text>
+
+        <rect class="fig-box" x="384" y="58" width="324" height="40" rx="4"/>
+        <text class="fig-s" x="396" y="82">knowledge_info — policy group</text>
+        <line class="fig-arw" x1="546" y1="100" x2="546" y2="114" marker-end="url(#a1)"/>
+        <text class="fig-s" x="556" y="112">1 : N</text>
+
+        <rect class="fig-box" x="384" y="116" width="324" height="48" rx="4"/>
+        <text class="fig-s" x="396" y="136">knowledge_policy — one row per entry</text>
+        <text class="fig-s" x="396" y="154" fill="var(--accent)">severity · batch_id · content</text>
+
+        <line class="fig-arw" x1="466" y1="166" x2="466" y2="182" marker-end="url(#a1)"/>
+        <line class="fig-arw" x1="626" y1="166" x2="626" y2="182" marker-end="url(#a1)"/>
+        <rect class="fig-bad" x="384" y="184" width="158" height="56" rx="4"/>
+        <text class="fig-s" x="463" y="204" text-anchor="middle">positive_embedding</text>
+        <text class="fig-s" x="463" y="222" text-anchor="middle">707 vectors · HNSW</text>
+        <rect class="fig-ok" x="550" y="184" width="158" height="56" rx="4"/>
+        <text class="fig-s" x="629" y="204" text-anchor="middle">carveout_embedding</text>
+        <text class="fig-s" x="629" y="222" text-anchor="middle">904 vectors · HNSW</text>
+        <text class="fig-s" x="384" y="252" fill="var(--muted)">delete an entry → its vectors cascade</text>
+
+        <text class="fig-s" x="756" y="18">RUNTIME · RETRIEVAL</text>
+        <rect class="fig-box" x="756" y="32" width="256" height="44" rx="5"/>
+        <text class="fig-s" x="884" y="59" text-anchor="middle">Sentence under review</text>
+        <line class="fig-arw" x1="884" y1="80" x2="884" y2="94" marker-end="url(#a1)"/>
+        <rect class="fig-box" x="756" y="98" width="256" height="40" rx="5"/>
+        <text class="fig-s" x="884" y="123" text-anchor="middle">BGE-M3 embedding &#183; Triton service</text>
+        <line class="fig-arw" x1="884" y1="142" x2="884" y2="156" marker-end="url(#a1)"/>
+        <rect class="fig-hi" x="756" y="160" width="256" height="48" rx="5"/>
+        <text class="fig-s" x="884" y="180" text-anchor="middle">ANN search over both indexes</text>
+        <text class="fig-s" x="884" y="198" text-anchor="middle">top-K each</text>
+        <path class="fig-arw" d="M712,212 L734,212 L734,184 L752,184" marker-end="url(#a1)"/>
+        <line class="fig-arw" x1="884" y1="212" x2="884" y2="226" marker-end="url(#a1)"/>
+        <rect class="fig-ok" x="756" y="230" width="256" height="44" rx="5"/>
+        <text class="fig-s" x="884" y="257" text-anchor="middle">Two pools → both decider stages</text>
+
+        <line x1="8" y1="296" x2="1012" y2="296" stroke="var(--line)" stroke-width="1"/>
+
+        <rect x="8" y="312" width="324" height="62" rx="5" fill="var(--sunken)" stroke="var(--muted)" stroke-width="1.2" stroke-dasharray="5 4"/>
+        <text class="fig-t" x="24" y="334" fill="var(--muted)">Next initiative — not in this release</text>
+        <text class="fig-s" x="24" y="356">QC edits an entry → reload → live next batch</text>
+        <path class="fig-arw" d="M170,308 L170,96" marker-end="url(#a1)"/>
+
+        <rect class="fig-bad" x="348" y="312" width="376" height="62" rx="5"/>
+        <text class="fig-t" x="364" y="334">Startup check — corpus digest vs batch_id</text>
+        <text class="fig-s" x="364" y="352">mismatch, or store unreachable → refuse to start</text>
+        <line class="fig-arw" x1="536" y1="308" x2="536" y2="280" marker-end="url(#a1)"/>
+
+        <rect class="fig-hi" x="740" y="312" width="272" height="62" rx="5"/>
+        <text class="fig-t" x="756" y="334">Substrate verified</text>
+        <text class="fig-s" x="756" y="356" fill="var(--accent)">1,611 / 1,611 identical, old store vs new</text>
+      </svg>
+      <figcaption>Severity moves onto the policy entry rather than being inferred in code, and the store becomes the single source every instance reads. Both are groundwork for QC maintaining the entries directly, which is the next initiative.</figcaption>
+    </figure>
+
+    <div class="g3">
+      <div class="card on-ok">
+        <span class="tag t-ok">What it prepares</span>
+        <p>The precondition for QC maintaining entries directly — a separate submission, not this release.</p>
+      </div>
+      <div class="card on-ok">
+        <span class="tag t-ok">One source</span>
+        <p>Every instance reads the same store. No packaged copies left to drift apart.</p>
+      </div>
+      <div class="card on-warn">
+        <span class="tag t-warn">Contract change</span>
+        <p>Output can now carry a new <span class="mono">Warning</span> severity. Downstream must confirm before traffic opens.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 05 · RESULT ═════════════════════════════════════════ -->
+<section class="slide" data-title="UAT result">
+  <div class="rail"><span class="eyebrow">Evidence · UAT result</span><span class="num">05 / 08</span></div>
+  <div class="stack">
+    <h2>Fewer false alarms <i>and</i> fewer missed violations — both down 62 %</h2>
+
+    <figure>
+      <svg viewBox="0 0 1020 250" role="img" aria-label="Production flagged 222 calls, of which 45 correct, and missed 53. The proposed pipeline flagged 146 calls, of which 78 correct, and missed 20. Both rows are drawn to the same scale.">
+        <rect class="fig-ok"  x="470" y="8" width="14" height="14" rx="2"/>
+        <text class="fig-s" x="492" y="20">correct detections</text>
+        <rect class="fig-bad" x="612" y="8" width="14" height="14" rx="2"/>
+        <text class="fig-s" x="634" y="20">false alarms</text>
+        <rect x="760" y="8" width="14" height="14" rx="2" fill="none" stroke="var(--flag)" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <text class="fig-s" x="782" y="20">missed violations</text>
+
+        <text class="fig-t" x="8" y="70">Production</text>
+        <text class="fig-s" x="8" y="90">flagged 222</text>
+        <rect class="fig-ok"  x="176" y="52" width="90"  height="46" rx="3"/>
+        <text class="fig-n" x="221" y="81" text-anchor="middle">45</text>
+        <rect class="fig-bad" x="266" y="52" width="354" height="46" rx="3"/>
+        <text class="fig-n" x="443" y="81" text-anchor="middle">177</text>
+        <rect x="640" y="52" width="106" height="46" rx="3" fill="none" stroke="var(--flag)" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <text class="fig-n" x="693" y="81" text-anchor="middle">53</text>
+
+        <text class="fig-t" x="8" y="172">Proposed</text>
+        <text class="fig-s" x="8" y="192">flagged 146</text>
+        <rect class="fig-ok"  x="176" y="154" width="156" height="46" rx="3"/>
+        <text class="fig-n" x="254" y="183" text-anchor="middle">78</text>
+        <rect class="fig-bad" x="332" y="154" width="136" height="46" rx="3"/>
+        <text class="fig-n" x="400" y="183" text-anchor="middle">68</text>
+        <rect x="468" y="154" width="40" height="46" rx="3" fill="none" stroke="var(--flag)" stroke-width="1.4" stroke-dasharray="4 3"/>
+        <text class="fig-n" x="488" y="183" text-anchor="middle">20</text>
+
+        <line class="fig-arw" x1="620" y1="102" x2="468" y2="148" marker-end="url(#a1)"/>
+        <text class="fig-t" x="560" y="132" text-anchor="middle" fill="var(--ok)">&#8722;109</text>
+        <line class="fig-arw" x1="746" y1="102" x2="510" y2="148" marker-end="url(#a1)"/>
+        <text class="fig-t" x="730" y="132" text-anchor="middle" fill="var(--ok)">&#8722;33</text>
+
+        <line x1="176" y1="222" x2="746" y2="222" stroke="var(--line)" stroke-width="1"/>
+        <text class="fig-s" x="176" y="240">0</text>
+        <text class="fig-s" x="461" y="240" text-anchor="middle">number of calls &#8212; both rows to the same scale</text>
+        <text class="fig-s" x="746" y="240" text-anchor="end">222</text>
+      </svg>
+      <figcaption>The lower bar is <b>shorter</b> — less work for QC — while its green segment is <b>longer</b> — more real violations caught. No trade was made between the two.</figcaption>
+    </figure>
+
+    <div class="g2-wide">
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Per 1,000 calls scored</th><th>Production</th><th>Proposed</th><th>Change</th></tr></thead>
+        <tbody>
+          <tr><td>Calls placed in the QC review queue</td><td>665</td><td><b>437</b></td><td>&#8722;228</td></tr>
+          <tr><td>&#8230;of which are real violations</td><td>135</td><td><b>234</b></td><td>+99</td></tr>
+          <tr><td>&#8230;of which are false alarms</td><td>530</td><td><b>204</b></td><td>&#8722;326</td></tr>
+          <tr><td>Violations that go undetected</td><td>159</td><td><b>60</b></td><td>&#8722;99</td></tr>
+        </tbody>
+      </table>
+      <p class="small">Of every 10 calls a reviewer opens: <b>2</b> contain a real violation today, <b>5</b> under the proposed pipeline. The queue does not merely shrink — it becomes more than twice as dense.</p>
+      </div>
+      <div class="card on-acc">
+        <span class="tag t-acc">How it was measured</span>
+        <p>QC selected <b>334 calls</b> from 21&#8211;25 Aug 2026 and adjudicated both environments, run in parallel, on that same set. QC identified <b>98</b> as containing a violation — the reference point for both sides.</p>
+        <p>Same calls, same adjudicator. The difference is attributable to the architecture, not to data or grading.</p>
+        <p class="small">Per-1,000 figures are scaled from that set, which QC selected and which is not a random sample of live traffic. Direction and relative magnitude hold; absolute volumes will differ.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 06 · GATES & RISK ═══════════════════════════════════ -->
+<section class="slide" data-title="Risk and rollback">
+  <div class="rail"><span class="eyebrow">Governance · risk &amp; rollback</span><span class="num">06 / 08</span></div>
+  <div class="stack">
+    <h2>If it goes wrong</h2>
+    <p class="lede">Nothing in this release is one-way. Every risk has a way back — most of them in minutes.</p>
+
+    <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>If this happens</th><th>What we do</th><th>How long</th></tr></thead>
+      <tbody>
+        <tr><td>Live results come out worse than UAT</td><td>Switch back to the old pipeline</td><td>Minutes</td></tr>
+        <tr><td>The primary decider clears too much</td><td>Turn that one stage off; the filter decider&#8217;s verdict stands</td><td>Under a minute</td></tr>
+        <tr><td>A severity looks wrong to QC</td><td>Edit the policy entry and reload</td><td>Same day</td></tr>
+        <tr><td>Two policy entries contradict each other <span class="small">(5 today)</span></td><td>QC decides which one wins; ingest then blocks the other</td><td>Same day</td></tr>
+        <tr><td>The knowledge store is stale, or down</td><td>It refuses to start &#8212; never scores on an old rulebook</td><td>Caught at startup</td></tr>
+        <tr><td>Downstream cannot read <span class="mono">Warning</span></td><td>Get written confirmation before traffic opens</td><td>Before go-live</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p class="small">The five DAB selection gates sit in the submission document. Four pass; the fifth is the approval condition on the next slide.</p>
+  </div>
+</section>
+
+<!-- ═══ 07 · RECOMMENDATION ═════════════════════════════════ -->
+<section class="slide" data-title="Recommendation">
+  <div class="rail"><span class="eyebrow">Decision · recommendation</span><span class="num">07 / 08</span></div>
+  <div class="stack">
+    <h2>Recommendation: approve go-live</h2>
+
+    <div class="g2-wide">
+      <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Board submission</th><th>Content</th></tr></thead>
+        <tbody>
+          <tr><td>Change</td><td>Pipeline architecture update, <span class="mono">sentiment_agent</span> case only; adds one shared knowledge database</td></tr>
+          <tr><td>Evidence</td><td>UAT, 334 calls, 21&#8211;25 Aug 2026, QC-adjudicated across both environments in parallel</td></tr>
+          <tr><td>Business effect</td><td>Per 1,000 calls: 228 fewer sent for review, 99 more real violations caught, 99 fewer missed</td></tr>
+          <tr><td>Infrastructure</td><td>No new hardware or nodes. One shared knowledge database</td></tr>
+          <tr><td>Rollback</td><td>Entrypoint alias, minutes. Optional stages disable individually in under a minute</td></tr>
+          <tr><td><b>Condition</b></td><td><b>Consuming system confirms in writing that it handles the</b> <span class="mono">Warning</span> <b>severity value</b> before traffic opens</td></tr>
+          <tr><td><b>Ask</b></td><td><b>Approve go-live, subject to that written confirmation.</b></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="card on-ok">
+          <span class="tag t-ok">Monitoring after go-live &#8212; QC&#8217;s own proposals</span>
+          <p><b>1 · System.</b> Retain the list of calls the filter excluded, retrievable by QC.</p>
+          <p><b>2 · System.</b> Surface, with priority, calls carrying high or critical indicators that were not flagged.</p>
+          <p><b>3 · QC.</b> Sample the excluded set periodically, measure the true miss rate, feed it into the next tuning round.</p>
+          <p><b>4 · Both.</b> Track false alarms and missed violations separately. No single combined score.</p>
+        </div>
+    </div>
+
+    <div class="note n-warn">
+      <strong>Question for the board.</strong> This time both numbers fell together, so no trade-off was required. That will not hold in the next tuning rounds: from here, reducing one raises the other. The board is asked to set the priority between <b>reducing unnecessary review</b> and <b>reducing missed violations</b>, as the stated basis for tuning.
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══ APPENDIX ════════════════════════════════════════════ -->
+<section class="slide" data-title="Appendix — end-to-end flow">
+  <div class="rail"><span class="eyebrow">Appendix · reference</span><span class="num">08 / 08</span></div>
+  <div class="stack">
+    <h2>End-to-end flow, in one view</h2>
+
+    <figure>
+      <svg viewBox="0 0 1400 700" role="img" aria-label="End to end flow. Audio arrives from IT over SFTP, passes through the ASR flow, and the transcript enters a pipeline of three filter layers and one verification pass. Filter 1 is cheap gates, filter 2 the scanner, filter 3 the filter decider, then the primary decider verifies, soften rewrites the wording, and the verdict returns to IT over SFTP. On the right, the knowledge base: corpus.yaml is ingested and embedded through Triton into Postgres with pgvector, and at runtime the sentence under review is embedded and searched to build two pools that both decider stages read.">
+      <!-- ══ ingress ══════════════════════════════════════════ -->
+      <text class="fig-cap" x="20" y="16">DATA IN — FROM IT</text>
+      <rect class="fig-box" x="20"  y="24" width="180" height="52" rx="5"/>
+      <text class="fig-l" x="110" y="46" text-anchor="middle">IT side</text>
+      <text class="fig-s" x="110" y="64" text-anchor="middle">call audio</text>
+      <line class="fig-arw" x1="204" y1="50" x2="221" y2="50" marker-end="url(#a1)"/>
+      <rect class="fig-warn" x="225" y="24" width="120" height="52" rx="5"/>
+      <text class="fig-l" x="285" y="46" text-anchor="middle">SFTP</text>
+      <text class="fig-s" x="285" y="64" text-anchor="middle">inbound</text>
+      <line class="fig-arw" x1="349" y1="50" x2="366" y2="50" marker-end="url(#a1)"/>
+      <rect class="fig-box" x="370" y="24" width="230" height="52" rx="5"/>
+      <text class="fig-l" x="485" y="44" text-anchor="middle">ASR flow</text>
+      <text class="fig-s" x="485" y="62" text-anchor="middle">audio → transcript · black box here</text>
+      <path class="fig-arw" d="M485,80 L485,92 L420,92 L420,100" marker-end="url(#a1)"/>
+
+      <!-- ══ pipeline ═════════════════════════════════════════ -->
+      <rect class="fig-box" x="180" y="104" width="480" height="56" rx="5"/>
+      <text class="fig-t" x="196" y="126">FILTER 1 · cheap gates</text>
+      <text class="fig-s" x="196" y="145">silent · bot check · short-call · kid check</text>
+      <rect x="515" y="121" width="130" height="22" rx="3" fill="var(--gem-w)" stroke="var(--gem)" stroke-opacity=".6"/>
+      <text class="fig-s" x="580" y="136" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">✦</tspan> Flash</text>
+      <line class="fig-arw" x1="420" y1="160" x2="420" y2="170" marker-end="url(#a1)"/>
+
+      <rect class="fig-box" x="180" y="174" width="480" height="56" rx="5"/>
+      <text class="fig-t" x="196" y="196">FILTER 2 · scanner</text>
+      <text class="fig-s" x="196" y="215">generic violation rules → candidate turns</text>
+      <rect x="515" y="191" width="130" height="22" rx="3" fill="var(--gem-w)" stroke="var(--gem)" stroke-opacity=".6"/>
+      <text class="fig-s" x="580" y="206" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">✦</tspan> Flash</text>
+      <line class="fig-arw" x1="420" y1="230" x2="420" y2="240" marker-end="url(#a1)"/>
+
+      <rect class="fig-box" x="180" y="244" width="480" height="56" rx="5"/>
+      <text class="fig-t" x="196" y="266">EVIDENCE · attribution &amp; halu check</text>
+      <text class="fig-s" x="196" y="285">the quoted turn must be the agent's, and real</text>
+      <rect x="515" y="261" width="130" height="22" rx="3" fill="var(--gem-w)" stroke="var(--gem)" stroke-opacity=".6"/>
+      <text class="fig-s" x="580" y="276" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">✦</tspan> Flash (high)</text>
+      <line class="fig-arw" x1="420" y1="300" x2="420" y2="310" marker-end="url(#a1)"/>
+
+      <rect class="fig-hi" x="180" y="314" width="480" height="56" rx="5"/>
+      <text class="fig-t" x="196" y="336">FILTER 3 · filter decider</text>
+      <text class="fig-s" x="196" y="355">reads both pools · leans to recall</text>
+      <rect x="515" y="331" width="130" height="22" rx="3" fill="var(--gem-w)" stroke="var(--gem)" stroke-opacity=".6"/>
+      <text class="fig-s" x="580" y="346" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">✦</tspan> Flash (high)</text>
+      <line class="fig-arw" x1="420" y1="370" x2="420" y2="380" marker-end="url(#a1)"/>
+
+      <rect class="fig-hi" x="180" y="384" width="480" height="56" rx="5"/>
+      <text class="fig-t" x="196" y="406">VERIFY · primary decider</text>
+      <text class="fig-s" x="196" y="425">same retrieval, stricter test · tightens precision</text>
+      <rect x="515" y="401" width="130" height="22" rx="3" fill="var(--cla-w)" stroke="var(--cla)" stroke-opacity=".6"/>
+      <text class="fig-s" x="580" y="416" text-anchor="middle"><tspan fill="#D97757" font-weight="700">✳</tspan> Sonnet</text>
+      <line class="fig-arw" x1="420" y1="440" x2="420" y2="450" marker-end="url(#a1)"/>
+
+      <rect class="fig-box" x="180" y="454" width="480" height="56" rx="5"/>
+      <text class="fig-t" x="196" y="476">SOFTEN · wording</text>
+      <text class="fig-s" x="196" y="495">rewrites the reason · never changes the verdict</text>
+      <rect x="515" y="471" width="130" height="22" rx="3" fill="var(--gem-w)" stroke="var(--gem)" stroke-opacity=".6"/>
+      <text class="fig-s" x="580" y="486" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">✦</tspan> Flash</text>
+      <line class="fig-arw" x1="420" y1="510" x2="420" y2="520" marker-end="url(#a1)"/>
+
+      <rect class="fig-ok" x="180" y="524" width="480" height="56" rx="5"/>
+      <text class="fig-t" x="196" y="546">FINAL VERDICT</text>
+      <text class="fig-s" x="196" y="565">violation · criterion · severity · evidence turns · reason</text>
+
+      <!-- exits -->
+      <rect class="fig-bad" x="20" y="300" width="130" height="56" rx="5"/>
+      <text class="fig-l" x="85" y="322" text-anchor="middle">No violation</text>
+      <text class="fig-s" x="85" y="340" text-anchor="middle">not scored</text>
+      <path class="fig-dsh" d="M176,132 L100,132 L100,296" marker-end="url(#a3)"/>
+      <text class="fig-s" x="104" y="215">gate exit</text>
+      <path class="fig-dsh" d="M176,342 L156,342" marker-end="url(#a3)"/>
+
+      <!-- ══ egress ═══════════════════════════════════════════ -->
+      <text class="fig-cap" x="20" y="596">DATA OUT — BACK TO IT</text>
+      <path class="fig-arw" d="M420,584 L420,592 L280,592 L280,600" marker-end="url(#a1)"/>
+      <rect class="fig-warn" x="180" y="604" width="200" height="52" rx="5"/>
+      <text class="fig-l" x="280" y="626" text-anchor="middle">SFTP</text>
+      <text class="fig-s" x="280" y="644" text-anchor="middle">outbound</text>
+      <line class="fig-arw" x1="384" y1="630" x2="406" y2="630" marker-end="url(#a1)"/>
+      <rect class="fig-box" x="410" y="604" width="250" height="52" rx="5"/>
+      <text class="fig-l" x="535" y="626" text-anchor="middle">IT side</text>
+      <text class="fig-s" x="535" y="644" text-anchor="middle">QC scoring result · record shape unchanged</text>
+
+      <!-- ══ knowledge base ═══════════════════════════════════ -->
+      <rect class="fig-grp" x="700" y="24" width="680" height="580" rx="7"/>
+      <text class="fig-cap" x="716" y="46" fill="#0a6a6e">KNOWLEDGE BASE — maintained by QC, loaded before scoring</text>
+
+      <rect class="fig-box" x="716" y="58" width="150" height="46" rx="5"/>
+      <text class="fig-l" x="791" y="78" text-anchor="middle">corpus.yaml</text>
+      <text class="fig-s" x="791" y="95" text-anchor="middle">QC-authored</text>
+      <line class="fig-arw" x1="870" y1="81" x2="890" y2="81" marker-end="url(#a1)"/>
+      <rect class="fig-hi" x="894" y="58" width="180" height="46" rx="5"/>
+      <text class="fig-l" x="984" y="78" text-anchor="middle">Ingest</text>
+      <text class="fig-s" x="984" y="95" text-anchor="middle">parse · embed · upsert</text>
+      <line class="fig-arw" x1="1078" y1="81" x2="1098" y2="81" marker-end="url(#a1)"/>
+      <rect class="fig-box" x="1102" y="58" width="262" height="46" rx="5"/>
+      <text class="fig-l" x="1233" y="78" text-anchor="middle">BGE-M3 — Triton service</text>
+      <text class="fig-s" x="1233" y="95" text-anchor="middle">embeddings for load and for query</text>
+      <path class="fig-arw" d="M984,108 L984,134" marker-end="url(#a1)"/>
+
+      <rect class="fig-grp" x="716" y="138" width="648" height="190" rx="6"/>
+      <text class="fig-s" x="730" y="158" fill="#0a6a6e">Postgres + pgvector</text>
+      <rect class="fig-box" x="730" y="166" width="620" height="30" rx="4"/>
+      <text class="fig-s" x="742" y="186">knowledge_info — policy group</text>
+      <line class="fig-arw" x1="1040" y1="196" x2="1040" y2="204" marker-end="url(#a1)"/>
+      <text class="fig-s" x="1050" y="204">1 : N</text>
+      <rect class="fig-box" x="730" y="208" width="620" height="34" rx="4"/>
+      <text class="fig-s" x="742" y="230">knowledge_policy — entry · <tspan fill="#0a6a6e" font-weight="700">severity</tspan> · batch_id</text>
+      <line class="fig-arw" x1="880" y1="242" x2="880" y2="250" marker-end="url(#a1)"/>
+      <line class="fig-arw" x1="1200" y1="242" x2="1200" y2="250" marker-end="url(#a1)"/>
+      <rect class="fig-bad" x="730" y="254" width="300" height="44" rx="4"/>
+      <text class="fig-s" x="880" y="273" text-anchor="middle">positive_embedding</text>
+      <text class="fig-s" x="880" y="290" text-anchor="middle">707 vectors · HNSW</text>
+      <rect class="fig-ok" x="1050" y="254" width="300" height="44" rx="4"/>
+      <text class="fig-s" x="1200" y="273" text-anchor="middle">carveout_embedding</text>
+      <text class="fig-s" x="1200" y="290" text-anchor="middle">904 vectors · HNSW</text>
+      <text class="fig-s" x="730" y="318">delete an entry → its vectors cascade · a group cannot be dropped while entries remain</text>
+
+      <rect class="fig-box" x="716" y="342" width="648" height="40" rx="5"/>
+      <text class="fig-s" x="730" y="366">Sentence under review — one candidate turn from the scanner</text>
+      <line class="fig-arw" x1="1040" y1="382" x2="1040" y2="394" marker-end="url(#a1)"/>
+      <rect class="fig-box" x="716" y="398" width="648" height="40" rx="5"/>
+      <text class="fig-s" x="730" y="422">Embedded through the same Triton service</text>
+      <line class="fig-arw" x1="1040" y1="438" x2="1040" y2="450" marker-end="url(#a1)"/>
+      <rect class="fig-hi" x="716" y="454" width="648" height="44" rx="5"/>
+      <text class="fig-s" x="730" y="472">ANN search over both HNSW indexes above</text>
+      <text class="fig-s" x="730" y="489">top-K each · ef_search 200</text>
+      <line class="fig-arw" x1="1040" y1="498" x2="1040" y2="510" marker-end="url(#a1)"/>
+      <rect class="fig-hi" x="716" y="514" width="648" height="44" rx="5"/>
+      <text class="fig-t" x="730" y="532">Two pools — violations + carve-outs</text>
+      <text class="fig-s" x="730" y="549">read by the filter decider and the primary decider</text>
+      <text class="fig-s" x="716" y="580" fill="#a5322e">Startup check — corpus digest vs batch_id: scoring refuses to start on mismatch or unreachable store</text>
+
+      <!-- pools feed both decider stages -->
+      <path class="fig-ret" d="M712,536 L688,536 L688,342 L664,342" marker-end="url(#a2)"/>
+      <path class="fig-ret" d="M688,536 L688,412 L664,412" marker-end="url(#a2)"/>
+      </svg>
+      <figcaption>Everything from the audio arriving over SFTP to the verdict going back the same way. The knowledge base on the right feeds <b>both</b> decider stages from one retrieval. Also available as a one-page A3 sheet — <span class="mono">docs/FLOW_sentiment_agent_end_to_end.pdf</span>.</figcaption>
+    </figure>
+
+    <div class="note">
+      <strong>Legend.</strong> Teal = knowledge-backed stage or store · amber = the SFTP exchange with IT · green = carve-outs and the final verdict · red = violations and the exit taken without a score. <b style="color:#4285F4">✦</b> Gemini and <b style="color:#D97757">✳</b> Claude both run on the existing Databricks endpoints.
+    </div>
+  </div>
+</section>
+
+</div><!-- /stage -->
+</div><!-- /deck -->
+
+<button class="edge l" id="prev" type="button" aria-label="Previous slide" title="Previous slide">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 4 L7 12 L15 20"/></svg>
+</button>
+<button class="edge r" id="next" type="button" aria-label="Next slide" title="Next slide">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 L17 12 L9 20"/></svg>
+</button>
+
+<div class="nav">
+  <span id="counter">Cover</span>
+</div>
+<p class="hint"><kbd>←</kbd> <kbd>→</kbd> or click either edge · <kbd>Esc</kbd> contents · <kbd>N</kbd> notes · <kbd>E</kbd> edit notes · <kbd>Ctrl</kbd>+<kbd>P</kbd> export PDF</p>
+
+<nav class="idx" id="idx" aria-label="Contents">
+  <h2>Contents</h2>
+  <ol id="idxList"></ol>
+</nav>
+
+<script>
+(function () {
+  var slides   = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var counter  = document.getElementById('counter');
+  var progress = document.getElementById('progress');
+  var idx      = document.getElementById('idx');
+  var idxList  = document.getElementById('idxList');
+  var prevBtn  = document.getElementById('prev');
+  var nextBtn  = document.getElementById('next');
+  var i = 0;
+
+  slides.forEach(function (s, k) {
+    var li = document.createElement('li');
+    li.tabIndex = 0;
+    li.innerHTML = '<span class="n">' + String(k + 1).padStart(2, '0') + '</span>' +
+                   '<span>' + (s.dataset.title || '') + '</span>';
+    li.addEventListener('click', function () { go(k); closeIdx(); });
+    li.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(k); closeIdx(); }
+    });
+    idxList.appendChild(li);
+  });
+  var idxItems = Array.prototype.slice.call(idxList.children);
+
+  function go(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('is-active', k === i); });
+    idxItems.forEach(function (li, k) { li.classList.toggle('on', k === i); });
+    counter.textContent = i === 0 ? 'Cover' : i + ' / ' + (slides.length - 1);
+    progress.style.width = ((i + 1) / slides.length * 100) + '%';
+    prevBtn.disabled = (i === 0);
+    nextBtn.disabled = (i === slides.length - 1);
+    if (location.hash !== '#' + (i + 1)) history.replaceState(null, '', '#' + (i + 1));
+  }
+  function closeIdx() { idx.classList.remove('is-open'); }
+
+  prevBtn.addEventListener('click', function () { go(i - 1); });
+  nextBtn.addEventListener('click', function () { go(i + 1); });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    switch (e.key) {
+      case 'ArrowRight': case 'PageDown': case ' ': e.preventDefault(); go(i + 1); break;
+      case 'ArrowLeft':  case 'PageUp':            e.preventDefault(); go(i - 1); break;
+      case 'Home':  e.preventDefault(); go(0); break;
+      case 'End':   e.preventDefault(); go(slides.length - 1); break;
+      case 'Escape':
+        e.preventDefault();
+        idx.classList.toggle('is-open');
+        break;
+    }
+  });
+
+  var start = parseInt((location.hash || '').slice(1), 10);
+  go(isNaN(start) ? 0 : start - 1);
+})();
+</script>
+
+
+<div class="notes" id="notes">
+  <div class="notes-bar">
+    <span class="lbl" id="notesToggle" title="Collapse / expand tray">Speaker notes <span class="build">build 98594dd5</span></span>
+    <span class="hintline" id="notesHint"><kbd>N</kbd> toggle tray · <kbd>E</kbd> edit</span>
+    <button id="notesEdit" type="button" title="Edit note (E)">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11.2 1.8l3 3L5.4 13.6 1.6 14.4l.8-3.8z"/></svg>
+      Edit
+    </button>
+    <button id="notesReset" type="button" title="Restore the original note">Reset</button>
+  </div>
+  <div class="notes-body" id="notesBody"></div>
+  <textarea id="notesInput" spellcheck="false" aria-label="Edit speaker note"></textarea>
+</div>
+
+<script>
+(function () {
+  var KEY = 'dab-sentiment-agent-notes-VN-2e4cd19c';
+  var DEFAULTS = ["Kính thưa hội đồng. Hôm nay tôi trình bày đề nghị phê duyệt go-live cho pipeline chấm tiêu chí Thái độ ĐTV — tức là bắt tuân thủ trong cuộc gọi thu hồi nợ.\n\nTôi xin đi theo ba bước: bài toán là gì, hiện tại trên live đang giải nó ra sao và yếu ở đâu, rồi bản đề xuất đã đo dưới UAT.\n\nNếu hội đồng chỉ giữ lại một ý, tôi mong đó là ý này: trọng tâm lần này không phải một prompt tốt hơn, mà là chuyển tri thức nghiệp vụ ra khỏi mã nguồn, vào một kho dùng chung do QC quản lý.", "Trước hết là bài toán.\n\nMỗi ngày làm việc có từ 15 đến 30 nghìn cuộc gọi thu hồi nợ được ghi âm. Lưới ô vuông bên trái là lượng đó; mấy ô tô đậm là phần mà soát thủ công kịp xem. Phần còn lại hoặc do hệ thống chấm, hoặc không ai chấm.\n\nBên phải là lý do bài toán này khó, và tôi lấy nguyên văn hai cặp câu từ chính bộ quy định QC đang dùng.\n\nCặp thứ nhất, điều hướng cuộc gọi. Câu xanh: anh chị bình tĩnh trao đổi được không — QC không bắt lỗi. Câu đỏ: anh có trao đổi lịch sự được không ạ — QC bắt lỗi. Cùng một khung câu, đổi đúng một từ: bình tĩnh thành lịch sự. Chữ ạ ở cuối cũng không gỡ được. Điều hướng khách hàng bình tĩnh thì được, nhưng hỏi khách hàng có lịch sự được không là chất vấn thái độ của họ.\n\nCặp thứ hai, câu kết thúc cuộc gọi. Nếu như anh không trao đổi lịch sự thì em xin phép ngắt máy — không bắt lỗi, vì đó là nêu điều kiện. Nếu mà anh bất lịch sự thì em xin phép ngắt máy — bắt lỗi, vì bất lịch sự là gán nhãn cho con người. Khác nhau đúng một chữ.\n\nTôi đưa hai cặp này lên để hội đồng thấy: không thể giải bài toán bằng từ khoá. Kết luận nằm ở ngữ cảnh.\n\nDải dưới cùng là quy mô bộ quy định: 919 mục do QC biên soạn, trải thành 1.611 biến thể câu, trên 81 nhóm tiêu chí. Xin lưu ý phần loại trừ nhiều hơn phần vi phạm — 904 so với 707. Phần lớn công sức nghiệp vụ là để nói rõ cái gì KHÔNG phải vi phạm.\n\nVà toàn bộ số đó hiện nằm trong gói phần mềm. QC muốn sửa một câu thì phải chờ một lần phát hành.\n\nBa thẻ dưới là chi phí nghiệp vụ: bắt nhầm tốn thời gian soát và làm oan cán bộ; bỏ sót là rủi ro tuân thủ và hoàn toàn im lặng; và sửa quy tắc thì chậm.", "Đây là bản đang chạy trên live, và tôi xin nói chính xác nó là cái gì.\n\nLuồng rất ngắn: hai cổng lọc rẻ tiền, Scanner tìm câu nghi, rồi Verifier kết luận. Không có truy hồi ở bất kỳ đâu. Bản trên live là prompt engineering — 1.611 mục quy định ở trang trước được dán nguyên vào prompt, không lọc gì theo câu đang xét.\n\nBảng bên dưới là ba điểm yếu, và cả ba đều là vấn đề cấu trúc chứ không phải do chưa tinh chỉnh đủ.\n\nMột, tri thức bị pha loãng: hai ba quy tắc thực sự liên quan nằm lẫn giữa hàng trăm quy tắc không liên quan, nên mô hình bắt được câu chữ bề mặt nhưng không áp được phần loại trừ.\n\nHai, sai không quy được về đâu: chỉ có một bước quyết định, nên mỗi lần sửa là sửa cả khối rồi chờ đo lại toàn bộ.\n\nBa, quy tắc đi kèm mã nguồn, nên không theo kịp thực tế ngoài hiện trường.\n\nXin lưu ý thẻ góc trên bên phải: bản trên live đang chạy Claude 4 Sonnet ở MỌI bước. Nghĩa là vấn đề không nằm ở chỗ dùng mô hình yếu — đã dùng mô hình mạnh nhất rồi mà vẫn sai. Vấn đề nằm ở kiến trúc.", "Đây là bản đề xuất, và đây là bản đã chạy trong UAT.\n\nXin hội đồng đọc sơ đồ theo cột nhãn bên trái. Có ba lớp lọc, rồi mới đến một lớp xác minh.\n\nLớp lọc thứ nhất là các cổng rẻ tiền: im lặng, máy trả lời, cuộc quá ngắn, và kiểm tra trẻ em. Trong đó chỉ kid check gọi mô hình, còn lại là luật định sẵn.\n\nLớp thứ hai là Scanner. Nó dùng các luật chung chung về vi phạm để quét ra ứng viên, chứ không kết luận.\n\nSau đó là bước kiểm tra bằng chứng: câu được trích phải là của cán bộ và phải có thật trong bản ghi.\n\nLớp lọc thứ ba là Filter decider. Đây là chỗ tri thức bắt đầu tham gia: nó đọc hai pool lấy từ kho. Xin lưu ý — prompt của nó thiên về recall, nghĩa là thà giữ lại ca còn nghi ngờ hơn là loại bỏ. Nên dù tên là decider, nó vẫn là một lớp lọc.\n\nLớp xác minh thật sự là Primary decider. Cùng một kết quả truy hồi, nhưng chạy trên mô hình mạnh hơn và với tiêu chuẩn chặt hơn. Đây là chỗ precision được siết.\n\nSoften chỉ diễn giải lại câu mô tả cho nhẹ đi, không đổi kết luận.\n\nCác thẻ nhỏ bên phải mỗi hàng là mô hình dùng cho bước đó: Gemini 3 Flash cho scanner và soften, Flash high cho halu check và filter decider, Claude 4 Sonnet chỉ dùng ở primary decider. Sonnet chỉ chạy trên số ca đã bị gắn nên chi phí không đáng kể.\n\nTôi chưa đưa con số ở trang này — kết quả đo sẽ nói ở trang 05. Trang này chỉ là kiến trúc.", "Đây là trang trung tâm của tài liệu.\n\nBên trái là đường nạp dữ liệu. QC biên soạn corpus, bước ingest đọc vào, sinh vector bằng BGE-M3 rồi ghi xuống cơ sở dữ liệu.\n\nKhối giữa là mô hình dữ liệu. Bảng knowledge_info là nhóm quy định. Bảng knowledge_policy là từng mục, và xin chú ý dòng màu: mức độ nặng nhẹ nằm ở đây, trên mục quy định do QC viết, chứ không suy ra trong mã nguồn như trước. Hai bảng vector bên dưới giữ 707 vector mẫu vi phạm và 904 vector mẫu loại trừ, mỗi bảng một chỉ mục HNSW. Xoá một mục thì vector của nó tự xoá theo; còn nhóm thì không xoá được khi vẫn còn mục bên trong — đó là ràng buộc cố ý để không mất dữ liệu.\n\nBên phải là đường chạy thật. Câu đang xét được sinh vector, tìm gần đúng trên cả hai chỉ mục, lấy top-K mỗi bên, thành hai pool đưa vào cả hai bước decider — filter decider và primary decider dùng chung một kết quả truy hồi.\n\nBa khối dưới cùng là ba điểm tôi muốn ghi vào biên bản.\n\nBên trái là bước tiếp theo, và tôi xin nói rõ: việc QC tự sửa mục quy định KHÔNG nằm trong lần trình này. Đó là một sáng kiến riêng, trình sau. Lần này chúng tôi chỉ đưa kho tri thức vào cơ sở dữ liệu — tức là làm nền cho việc đó.\n\nỞ giữa: kiểm tra lúc khởi động. Nếu kho và bộ quy định lệch phiên bản, hoặc kho không truy cập được, hệ thống từ chối chạy. Không có nó thì lỗi sẽ im lặng — hệ thống vẫn chạy, vẫn trả kết quả trông hợp lý, nhưng dựa trên quy định cũ.\n\nBên phải: tôi đã kiểm chứng đổi nền lưu trữ không đổi kết quả. Lấy toàn bộ 1.611 mục làm truy vấn, đối chiếu nền cũ với nền mới, trùng khớp tuyệt đối. Phép đo này không có mô hình ngôn ngữ tham gia nên không có nhiễu.", "Kết quả UAT.\n\nHàng trên là bản trên live, hàng dưới là bản đề xuất, cả hai vẽ cùng một tỉ lệ.\n\nProduction báo 222 cuộc để bắt đúng 45. Bản đề xuất báo 146 và bắt đúng 78.\n\nXin hội đồng nhìn hình dạng chứ chưa cần nhìn số: thanh dưới NGẮN HƠN, tức ít việc hơn cho QC, mà phần xanh lại DÀI HƠN, tức bắt được nhiều vi phạm thật hơn. Không đánh đổi loại này lấy loại kia.\n\nBắt nhầm 177 xuống 68. Bỏ sót 53 xuống 20. Cả hai giảm 62 phần trăm.\n\nBảng dưới quy về một nghìn cuộc gọi cho dễ hình dung: giảm 228 cuộc phải soát, tăng 99 vi phạm thật bắt được, giảm 99 vi phạm lọt hoàn toàn. Nói cách khác, trong 10 cuộc một cán bộ mở ra, hôm nay có 2 cuộc thật, với bản mới là 5.\n\nThẻ bên phải là cách đo, và tôi xin nhấn mạnh vì nó quyết định con số đáng tin đến đâu. QC chọn 334 cuộc, tự đối chiếu trên hai môi trường chạy song song, xác định 98 cuộc có vi phạm làm mốc chung. Cùng tập cuộc gọi, cùng người đánh giá — nên chênh lệch quy được về kiến trúc.\n\nDòng chữ nhỏ cuối thẻ là giới hạn tôi khai rõ: tập UAT do QC chọn, không phải mẫu ngẫu nhiên, nên con số tuyệt đối trên production sẽ khác.", "Trang này trả lời đúng một câu hỏi: nếu có chuyện gì thì lùi được không.\n\nXin hội đồng nhìn cột bên phải. Phần lớn tính bằng phút.\n\nKết quả thật kém hơn UAT — chuyển về pipeline cũ. Primary decider gỡ nhầm — tắt riêng stage đó, verdict của bước trước vẫn còn. Mức độ chưa đúng ý QC — sửa mục quy định rồi nạp lại.\n\nDòng thứ tư là phát hiện mới trong lúc chuẩn bị hồ sơ: hiện có 5 câu vừa nằm ở phần vi phạm vừa nằm ở phần loại trừ, nên hệ thống nhận bằng chứng mâu thuẫn. QC phân định, sau đó bước nạp dữ liệu chặn không cho tái sinh. Tôi chủ động nêu ra.\n\nDòng thứ năm là cơ chế mới: kho tri thức lệch phiên bản hoặc không truy cập được thì hệ thống TỪ CHỐI CHẠY. Không có nó thì lỗi im lặng — vẫn chạy, vẫn trả kết quả trông hợp lý, nhưng dựa trên quy định cũ.\n\nDòng chữ nhỏ cuối trang: năm cổng lựa chọn theo khung DAB nằm trong hồ sơ, bốn cổng đạt, cổng còn lại là điều kiện phê duyệt tôi nói ở trang sau.", "Phần đề nghị.\n\nBảng bên trái là hồ sơ trình — đây là trang hội đồng cần ghi vào biên bản. Con số đã nói ở trang 05, tôi không nhắc lại. Điều kiện duy nhất: hệ thống hạ nguồn xác nhận bằng văn bản rằng xử lý được giá trị Cảnh báo, trước khi mở lưu lượng.\n\nThẻ bên phải là cơ chế theo dõi sau go-live. Bốn mục này là đề xuất của chính QC trong biên bản đánh giá, tôi giữ nguyên. Trọng tâm là làm cho nhóm cuộc gọi bị bộ lọc loại không còn nằm ngoài tầm nhìn — mục 2 sẽ đưa lên trước những ca có dấu hiệu nặng mà hệ thống không gắn.\n\nCuối cùng, một nội dung xin ý kiến. Lần này hai loại sai giảm cùng nhau nên chưa phải chọn. Các vòng sau thì phải: giảm tiếp loại này sẽ làm tăng loại kia. Chúng tôi cần hội đồng chốt thứ tự ưu tiên giữa giảm kiểm tra không cần thiết và giảm bỏ sót, để làm căn cứ hiệu chỉnh.\n\nXin hết. Kính mời hội đồng cho ý kiến.", "Trang phụ lục — tôi không trình bày trang này, chỉ mở khi hội đồng muốn xem toàn cảnh.\n\nĐây là toàn bộ luồng trên một hình. Bên trái trên cùng: dữ liệu vào — phía IT gửi file ghi âm qua SFTP, đi qua luồng ASR của chúng tôi, ra bản ghi lời thoại. Luồng ASR ở đây tôi vẽ như một hộp đen vì nó không thuộc phạm vi hồ sơ này.\n\nCột giữa là pipeline chấm điểm, đọc từ trên xuống: ba lớp lọc, một lớp xác minh, rồi soften và kết luận cuối. Bên trái mỗi lớp là ô thoát — cuộc gọi rời luồng mà không bị chấm.\n\nDưới cùng bên trái: dữ liệu ra — kết quả quay lại phía IT cũng qua SFTP, cấu trúc bản ghi giữ nguyên.\n\nKhối bên phải là kho tri thức: corpus do QC biên soạn, nạp qua bước ingest, sinh vector bằng Triton, lưu vào Postgres với bốn bảng. Phía dưới là đường chạy thật: câu đang xét được sinh vector qua đúng dịch vụ Triton đó, tìm gần đúng trên hai chỉ mục, ra hai pool.\n\nXin chú ý hai mũi tên xanh nét đứt đi ngược sang trái: hai pool đó được CẢ HAI bước decider dùng chung, không phải mỗi bước tra một lần khác nhau.\n\nDòng đỏ dưới cùng là kiểm tra khởi động: nếu kho lệch phiên bản với bộ quy định, hệ thống từ chối chạy."];
+
+  var wrap  = document.getElementById('notes');
+  var body  = document.getElementById('notesBody');
+  var input = document.getElementById('notesInput');
+  var hint  = document.getElementById('notesHint');
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+
+  var store = {};
+  try { store = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { store = {}; }
+
+  function current() {
+    for (var k = 0; k < slides.length; k++) {
+      if (slides[k].classList.contains('is-active')) return k;
+    }
+    return 0;
+  }
+  function textFor(k) {
+    return (store[k] !== undefined ? store[k] : (DEFAULTS[k] || ''));
+  }
+  function render() {
+    var t = textFor(current());
+    body.textContent = t || '(no note for this slide)';
+    if (!editing) input.value = t;
+  }
+
+  var editing = false;
+  function edit(on) {
+    editing = on;
+    wrap.classList.toggle('is-editing', on);
+    wrap.classList.remove('is-closed');
+    hint.innerHTML = on
+      ? '<kbd>Enter</kbd> save · <kbd>Shift</kbd>+<kbd>Enter</kbd> new line · <kbd>Esc</kbd> cancel'
+      : '<kbd>N</kbd> toggle tray · <kbd>E</kbd> edit';
+    if (on) { input.value = textFor(current()); input.focus(); }
+    else { input.blur(); render(); }
+  }
+  function save() {
+    store[current()] = input.value;
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    edit(false);
+  }
+
+  document.getElementById('notesEdit').addEventListener('click', function () { edit(!editing); });
+  document.getElementById('notesToggle').addEventListener('click', function () {
+    if (editing) return;
+    wrap.classList.toggle('is-closed');
+  });
+  document.getElementById('notesReset').addEventListener('click', function () {
+    delete store[current()];
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {}
+    edit(false);
+  });
+
+  // Enter saves and hands the keyboard back to the deck; Shift+Enter is a
+  // newline. Without this the tray would swallow every arrow key the moment
+  // it took focus, which is the thing the read-only default exists to avoid.
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); save(); }
+    else if (e.key === 'Escape') { e.preventDefault(); edit(false); }
+    e.stopPropagation();
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (editing) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'n' || e.key === 'N') { wrap.classList.toggle('is-closed'); }
+    if (e.key === 'e' || e.key === 'E') { e.preventDefault(); edit(true); }
+  }, true);
+
+  // The deck swaps `.is-active` without firing an event, so watch the class.
+  new MutationObserver(function () { if (!editing) render(); })
+    .observe(document.getElementById('stage'),
+             { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+  render();
+})();
+</script>
+
+</body>
+</html>

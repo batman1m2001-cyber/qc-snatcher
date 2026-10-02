@@ -1,0 +1,92 @@
+Xác định: **Qua cuộc trao đổi, có thể xác nhận Customer là CHÍNH CHỦ NỢ hoặc NGƯỜI QUEN của chủ nợ không?** (xác nhận ngầm qua hành vi/lời nói)
+
+**Xác nhận ngầm (true)** nếu:
+1. **Xác nhận đúng số**: Customer nói "đúng số rồi", "gọi đúng số rồi", "số này đúng rồi" → TÍNH LÀ xác nhận danh tính
+
+2. **Chính chủ nợ**: Agent gọi tên "Em chào anh Minh", "Chị Lan ơi"
+   VÀ customer THAM GIA trao đổi VỀ KHOẢN VAY CỦA CHÍNH HỌ (trả lời câu hỏi về khoản vay, hứa thanh toán, KHÔNG phản đối danh tính)
+   VÀ/HOẶC customer đồng ý/xác nhận khi Agent nói thông tin: "rồi", "rồi rồi", "ừ", "ok", "được", "biết rồi"
+
+3. **Chính chủ nợ**: Customer chủ động cung cấp thông tin về khoản vay CỦA CHÍNH HỌ:
+   "tôi sẽ thanh toán", "để tôi kiểm tra", "tôi đã trả rồi"
+
+4. **Người quen / người thân**: Customer xác nhận quen biết hoặc có quan hệ thân với chủ nợ:
+   - **Quan hệ gia đình**: "nó là em tôi", "đó là con tôi", "con nhà tôi", "thằng (anh/em) X là con cô", "này là con nhà cô", "tôi là mẹ nó", "bố/mẹ/anh/em/chị/con/cháu của X"
+   - **Quan hệ xã hội**: "tôi biết người đó", "quen", "là bạn tôi", "đồng nghiệp", "hàng xóm"
+   - **Vai trò công việc**: "tôi là nhân viên của họ", "chị là nhân viên chị giữ số", "để tôi nói lại cho"
+   (Chỉ cần xác nhận quen biết/quan hệ là đủ, KHÔNG cần tham gia trao đổi thêm)
+   **Quan trọng**: Nếu customer XÁC NHẬN quan hệ (vd "con nhà cô", "là mẹ nó") rồi SAU ĐÓ phủ nhận ("cô không biết") → vẫn TÍNH là verified, vì xác nhận quan hệ ở đầu cuộc gọi đã đủ để CB cung cấp thông tin.
+
+5. **Customer phản hồi MƠ HỒ ban đầu + có xác nhận RÕ RÀNG sau đó** (TH2 — ambiguous then confirm):
+
+   **Định nghĩa phản hồi mơ hồ ban đầu** (sau câu hỏi xác minh danh tính của Agent):
+   - "Sao thế", "Sao thế em", "Sao ạ", "Sao vậy", "Sao em"
+   - "Có việc gì không", "Có việc gì không em", "Có việc gì thế", "Có chuyện gì", "Gì thế ạ", "Gì thế"
+   - "Nói đi", "Nói đi em", "Em cứ nói", "Trao đổi đi", "Nói tiếp đi", "Em nói gì"
+   - "Ô thế chú gọi là có vấn đề gì đấy", "Có chuyện gì vậy"
+
+   Bối cảnh trigger: Agent đã hỏi xác minh ("phải chị X không" / "đây có phải số anh Y không" / "anh là anh Z đúng không ạ").
+
+   **QUY TẮC**: Phản hồi mơ hồ ban đầu **CHƯA ĐỦ** để verified=true. PHẢI tìm thêm tín hiệu SAU đó trong cuộc gọi để quyết định:
+
+   ### Subcase 5a — Có xác nhận rõ ràng SAU disclosure → verified=true
+   Sau khi Customer nói câu mơ hồ + Agent cung cấp thông tin khoản vay, nếu Customer trả lời bằng phrase xác nhận RÕ RÀNG **CÓ NGHĨA ĐỒNG Ý** ("Ừ", "Ờ", "Đúng", "Đúng rồi", "Ok", "Phải", "Vâng", "Dạ" đứng đơn lẻ hoặc trong câu đồng ý) → ngữ cảnh sau đó xác định người nghe là KH → **verified=true**.
+
+   **QUAN TRỌNG — phải là phrase ĐỒNG Ý rõ, KHÔNG được tính là verified nếu**:
+   - KH tiếp tục im lặng / phản hồi gibberish ("nhìn đẹp đẹp", "cái này bỏ", "à là sao là sao") — đây là KH không hiểu / không tỉnh táo / nói lộn, KHÔNG phải xác nhận
+   - KH tiếp tục hỏi lại / mơ hồ ("là sao", "hả", "cái gì", "nói lại")
+   - KH chỉ "không phủ nhận" mà không có phrase ĐỒNG Ý → **KHÔNG ĐỦ** để verified=true
+   - Agent phải hỏi lại danh tính nhiều lần (>=2 lần) mà KH chưa từng đồng ý rõ → verified=FALSE
+
+   Ví dụ:
+   - Agent: "anh A đúng không ạ" → Customer: "có việc gì không em" → Agent: "anh có khoản vay quá hạn 100 ngày, số tiền cần thanh toán 2 triệu" → Customer: "ừ" → **verified=true** (TH2 hợp lệ)
+   - Agent: "chị B phải không" → Customer: "sao thế" → Agent: tiết lộ thông tin → Customer: "ok em" → **verified=true**
+   - Agent: "chị cúc nghe máy phải không" → KH "ừ" → Agent hỏi lại 2-3 lần → KH chỉ nói "có chuyện gì không", "cái gì hông" → Agent tiết lộ → KH "nhìn đẹp đẹp", "cái này bỏ" → **verified=FALSE** (KH không hề đồng ý rõ, chỉ gibberish — không tính là TH2 5a)
+
+   ### Subcase 5b — Customer phủ nhận / im lặng / tiếp tục mơ hồ SAU disclosure → verified=false
+   Sau khi Customer nói câu mơ hồ + Agent cung cấp thông tin khoản vay, nếu Customer:
+   - Phủ nhận: "không phải tôi", "anh không phải", "không quen", "không biết", "không biết ai", "nhầm số", "sai số", "không phải số này", "không, anh không biết nó đâu"
+   - Im lặng (không có phản hồi gì khác)
+   - Tiếp tục mơ hồ: "hả", "cái gì ạ", "gì cơ", "nói lại đi"
+   → **verified=false** (KH chưa hề xác nhận, Agent đang vi phạm)
+
+   Ví dụ:
+   - Agent: "anh A không ạ" → Customer: "ô thế chú gọi là có vấn đề gì đấy" → Agent: tiết lộ thông tin → Customer: "không, anh không biết nó đâu" → **verified=false** (TH3)
+   - Agent: "chị C đúng không" → Customer: "sao thế" → Agent: tiết lộ thông tin → Customer: (im lặng) → **verified=false**
+
+   ### Subcase 5c — Customer chủ động bảo CB tiếp tục ("nói đi em", "trao đổi đi") rồi tham gia thực sự về khoản vay → verified=true
+   Đây là case đặc biệt: phrase "nói đi em" về danh nghĩa mơ hồ, nhưng nếu sau đó Customer **TÍCH CỰC TRAO ĐỔI** về khoản vay của chính họ (hứa thanh toán, kiểm tra số tiền, đồng ý phương án) → ngầm xác nhận là chính chủ → **verified=true**.
+
+   Ngược lại, nếu Customer nói "nói đi em" rồi NGAY SAU phủ nhận ("không phải tôi", "không quen") → **verified=false**.
+
+   **Phân biệt với tò mò về khoản vay (KHÔNG verified)**: nếu Customer hỏi cụ thể về thông tin khoản vay như "nợ bao nhiêu", "vay cái gì", "công ty gì", "khoản nào" → đây là dò thông tin, KHÔNG phải xác nhận ngầm (xem mục "Không có xác nhận ngầm" bên dưới).
+
+6. **Khách hàng là pháp nhân/công ty**: Agent hỏi xác nhận tên công ty VÀ customer xác nhận đúng:
+   - Agent: "cho em hỏi từ công ty ABC ạ" → Customer: "ừ", "đúng rồi", "vâng"
+   - Agent: "đây có phải công ty XYZ không ạ" → Customer: "phải", "đúng"
+   → TÍNH LÀ xác nhận danh tính (vì chủ nợ là công ty, xác nhận tên công ty = xác nhận danh tính)
+
+**Không có xác nhận ngầm (false)** nếu:
+- Customer PHỦ NHẬN QUEN BIẾT và KHÔNG giải thích thêm mối quan hệ: "tôi không quen", "gọi nhầm rồi", "không biết ai", "nhầm số", "không quen nha", "anh không quen"
+- Customer NGHI NGỜ: "lừa đảo", "em là ai", "sao có số tôi"
+- Customer cúp máy/không hợp tác
+- Customer CHỈ PHÀN NÀN về việc bị gọi nhiều: "gọi hoài", "làm phiền", "ngày nào cũng gọi" → KHÔNG phải xác nhận ngầm
+- Customer CHỈ TÒ MÒ hỏi lại: "nợ bao nhiêu?", "vay cái gì?", "ở đâu?" → KHÔNG phải xác nhận ngầm
+- Customer chỉ nói về NGƯỜI KHÁC mà KHÔNG xác nhận quen biết: "về nhà nó đốt nhà lên" (nói chung chung) → KHÔNG phải xác nhận
+
+**QUAN TRỌNG - Phân biệt tham gia trao đổi vs xác nhận ngầm:**
+- Phàn nàn "gọi anh hoài", "làm phiền", "cứ điện hoài" → KHÔNG phải xác nhận ngầm
+- Hỏi tò mò "nợ bao nhiêu", "vay cái gì", "công ty gì" → KHÔNG phải xác nhận ngầm
+- Yêu cầu "đừng gọi nữa", "xóa số đi" → KHÔNG phải xác nhận ngầm
+- Chỉ khi customer THAM GIA về khoản vay CỦA CHÍNH HỌ hoặc XÁC NHẬN QUEN BIẾT debtor mới tính là xác nhận ngầm
+
+**QUAN TRỌNG - Phân biệt phủ nhận chính chủ vs phủ nhận quen biết:**
+- Customer nói "không" + giải thích là nhân viên/người thân giữ số/sẽ nhắn lại → VẪN LÀ xác nhận ngầm (người quen)
+- Customer nói "không quen", "không biết người đó", "không biết ai" → Mới là phủ nhận quen biết thật sự
+
+Trả về định dạng XML (không thêm bất cứ thông tin thừa nào):
+<verified>true/false</verified>
+<reason>dẫn chứng ngắn gọn</reason>
+
+Nội dung cuộc gọi:
+{transcript}

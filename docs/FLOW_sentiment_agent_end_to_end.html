@@ -1,0 +1,336 @@
+<meta charset="UTF-8">
+<title>Virtual QC on Agent Sentiment — end-to-end flow</title>
+<style>
+  @page { size: A3 landscape; margin: 8mm; }
+  :root {
+    --ink:#0f1717; --ink2:#33403f; --muted:#5d6c6c; --line:#d3dbdb; --sunken:#eaefef;
+    --accent:#0a6a6e; --accent-w:#e2f0f0; --flag:#a5322e; --flag-w:#fbeceb;
+    --ok:#1a6b47; --ok-w:#e6f3ec; --warn:#8d5c07; --warn-w:#fbf2df;
+    --gem:#4285F4; --gem-w:#eaf1fe; --cla:#D97757; --cla-w:#fbeee8;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#fff; color:var(--ink);
+         font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif; }
+  .wrap { padding:8mm 10mm; }
+  h1 { font-size:19px; margin:0 0 3px; letter-spacing:-.01em; }
+  .sub { font-size:12px; color:var(--muted); margin:0 0 10px; }
+  svg { width:100%; height:auto; display:block; }
+  .legend { margin-top:9px; display:flex; gap:20px; flex-wrap:wrap;
+            font-size:11px; color:var(--muted); align-items:center; }
+  .legend b { color:var(--ink2); font-weight:600; }
+  .sw { display:inline-block; width:11px; height:11px; border-radius:2px;
+        vertical-align:-1px; margin-right:5px; border:1px solid; }
+  .foot { margin-top:7px; font-size:11px; color:var(--muted); line-height:1.55; }
+  .foot b { color:var(--ink2); font-weight:600; }
+  .t   { font-size:13px; font-weight:600; fill:var(--ink); }
+  .l   { font-size:12px; fill:var(--ink2); }
+  .s   { font-size:11px; fill:var(--muted); }
+  .cap { font-size:10.5px; font-weight:700; letter-spacing:.1em; fill:var(--muted); }
+  .box { fill:var(--sunken); stroke:var(--line); stroke-width:1.2; }
+  .kb  { fill:var(--accent-w); stroke:var(--accent); stroke-width:1.5; }
+  .ok  { fill:var(--ok-w); stroke:var(--ok); stroke-width:1.3; }
+  .bad { fill:var(--flag-w); stroke:var(--flag); stroke-width:1.3; }
+  .ext { fill:var(--warn-w); stroke:var(--warn); stroke-width:1.3; }
+  .prop{ fill:#ffffff; stroke:var(--muted); stroke-width:1.3; stroke-dasharray:4 3; }
+  .arw { stroke:var(--muted); stroke-width:1.5; fill:none; }
+  .dsh { stroke:var(--flag); stroke-width:1.4; fill:none; stroke-dasharray:5 4; }
+  .ret { stroke:var(--accent); stroke-width:1.5; fill:none; stroke-dasharray:5 4; }
+  .grp { fill:none; stroke:var(--line); stroke-width:1.2; }
+  .r-eda { fill:#1f4e79; } .r-qc { fill:#8a3b8f; } .r-it { fill:#8a6d3b; }
+  .own { margin-top:10px; border-collapse:collapse; width:100%; font-size:11px; }
+  .own th { text-align:left; padding:5px 9px; font-weight:700; color:#fff;
+            letter-spacing:.04em; }
+  .own td { padding:5px 9px; vertical-align:top; color:var(--ink2);
+            border:1px solid var(--line); width:33.33%; }
+  .own th.eda { background:#1f4e79; } .own th.qc { background:#8a3b8f; }
+  .own th.it  { background:#8a6d3b; }
+  @media print { .wrap { padding:0; }
+    * { -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; } }
+</style>
+
+<div class="wrap">
+<h1>Virtual QC on Agent Sentiment &#8212; end-to-end flow</h1>
+<p class="sub">Audio leaves Mediatel and reaches us as a transcript over SFTP; the score returns to Tethys; QC&#8217;s disagreements come back as knowledge-base proposals that a human approves.</p>
+
+<svg viewBox="0 0 1720 920" role="img" aria-label="End to end flow. Mediatel records the call and RCS batches the recordings every two hours into split archives with a completed manifest, uploaded to the internal SFTP server. The manifest fires a webhook to the AI Core service, which verifies and transcribes, writes the transcript back to SFTP and webhooks us. Our pipeline runs three filter layers and one verification pass: cheap gates, the scanner, an evidence attribution and hallucination check, the filter decider, the primary decider, then soften, producing the final verdict. The verdict returns over SFTP to RCS, which writes it into Tethys CRM and the Collection Portal. QC reviews the score in IT's VQC tool and any disagreement becomes a knowledge base proposal with no vector attached, which a QC lead approves or rejects; approved entries are embedded on the CPU Triton service and go live under a new batch id at the next batch window. On the right, the knowledge base: corpus yaml is ingested and embedded through Triton into Postgres with pgvector, and at runtime the sentence under review is embedded and searched to build two pools that both decider stages read.">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="#5d6c6c"/>
+    </marker>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="#0a6a6e"/>
+    </marker>
+    <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,1 L9,5 L0,9 z" fill="#a5322e"/>
+    </marker>
+  </defs>
+
+
+  <text class="cap" x="1402" y="16">TEAM</text>
+  <rect class="r-eda" x="1402" y="26" width="16" height="9" rx="2"/>
+  <text class="s" x="1426" y="35">EDA &#8212; this team</text>
+  <rect class="r-qc"  x="1402" y="46" width="16" height="9" rx="2"/>
+  <text class="s" x="1426" y="55">QC &#8212; business</text>
+  <rect class="r-it"  x="1402" y="66" width="16" height="9" rx="2"/>
+  <text class="s" x="1426" y="75">IT &#8212; RiskCS / platform</text>
+
+  <!-- ══ BAND 1 — ingress ══════════════════════════════════════════ -->
+  <text class="cap" x="20"  y="16">WIN ON-PREMISE &#183; IT</text>
+  <text class="cap" x="432" y="16">AWS &#8212; SFTP (IT) &#183; AI CORE (EDA)</text>
+
+  <rect class="box" x="20" y="24" width="170" height="56" rx="5"/>
+  <rect class="r-it" x="21" y="25" width="168" height="6" rx="3"/>
+  <text class="l" x="105" y="46" text-anchor="middle">Mediatel</text>
+  <text class="s" x="105" y="64" text-anchor="middle">records audio + metadata</text>
+  <line class="arw" x1="194" y1="52" x2="212" y2="52" marker-end="url(#a)"/>
+
+  <rect class="box" x="216" y="24" width="190" height="56" rx="5"/>
+  <rect class="r-it" x="217" y="25" width="188" height="6" rx="3"/>
+  <text class="l" x="311" y="46" text-anchor="middle">RCS</text>
+  <text class="s" x="311" y="64" text-anchor="middle">every ~2h &#183; zip in 20&#8211;30 parts</text>
+  <line class="arw" x1="410" y1="52" x2="428" y2="52" marker-end="url(#a)"/>
+
+  <rect class="ext" x="432" y="24" width="180" height="56" rx="5"/>
+  <rect class="r-it" x="433" y="25" width="178" height="6" rx="3"/>
+  <text class="l" x="522" y="46" text-anchor="middle">SFTP &#8212; incoming/</text>
+  <text class="s" x="522" y="64" text-anchor="middle">parts + .completed manifest</text>
+  <line class="arw" x1="616" y1="52" x2="634" y2="52" marker-end="url(#a)"/>
+
+  <rect class="box" x="638" y="24" width="200" height="56" rx="5"/>
+  <rect class="r-eda" x="639" y="25" width="198" height="6" rx="3"/>
+  <text class="l" x="738" y="46" text-anchor="middle">AI Core &#8212; ASR</text>
+  <text class="s" x="738" y="64" text-anchor="middle">hash verify &#183; reassemble &#183; V2T</text>
+  <line class="arw" x1="842" y1="52" x2="860" y2="52" marker-end="url(#a)"/>
+
+  <rect class="ext" x="864" y="24" width="200" height="56" rx="5"/>
+  <rect class="r-it" x="865" y="25" width="198" height="6" rx="3"/>
+  <text class="l" x="964" y="46" text-anchor="middle">SFTP &#8212; transcripts/</text>
+  <text class="s" x="964" y="64" text-anchor="middle">call_id_transcript.txt</text>
+
+  <text class="s" x="1084" y="46">Every hop is a webhook fired by a file landing</text>
+  <text class="s" x="1084" y="64">&#8212; the .completed manifest, then the transcript.</text>
+
+  <path class="arw" d="M964,84 L964,108 L360,108 L360,146" marker-end="url(#a)"/>
+  <text class="s" x="392" y="102">webhook &#183; call_id + transcript path</text>
+
+  <!-- ══ BAND 2 left — the scoring pipeline ═══════════════════════ -->
+  <text class="cap" x="180" y="143">SCORING PIPELINE &#183; EDA</text>
+  <rect class="box" x="180" y="150" width="480" height="56" rx="5"/>
+  <rect class="r-eda" x="181" y="151" width="478" height="6" rx="3"/>
+  <text class="t" x="196" y="172">FILTER 1 &#183; cheap gates</text>
+  <text class="s" x="196" y="191">silent &#183; bot check &#183; short-call &#183; kid check</text>
+  <rect x="515" y="167" width="130" height="22" rx="3" fill="#eaf1fe" stroke="#4285F4" stroke-opacity=".6"/>
+  <text class="s" x="580" y="182" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">&#10022;</tspan> Flash</text>
+  <line class="arw" x1="420" y1="206" x2="420" y2="216" marker-end="url(#a)"/>
+
+  <rect class="box" x="180" y="220" width="480" height="56" rx="5"/>
+  <rect class="r-eda" x="181" y="221" width="478" height="6" rx="3"/>
+  <text class="t" x="196" y="242">FILTER 2 &#183; scanner</text>
+  <text class="s" x="196" y="261">generic violation rules &#8594; candidate turns</text>
+  <rect x="515" y="237" width="130" height="22" rx="3" fill="#eaf1fe" stroke="#4285F4" stroke-opacity=".6"/>
+  <text class="s" x="580" y="252" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">&#10022;</tspan> Flash</text>
+  <line class="arw" x1="420" y1="276" x2="420" y2="286" marker-end="url(#a)"/>
+
+  <rect class="box" x="180" y="290" width="480" height="56" rx="5"/>
+  <rect class="r-eda" x="181" y="291" width="478" height="6" rx="3"/>
+  <text class="t" x="196" y="312">EVIDENCE &#183; attribution &amp; halu check</text>
+  <text class="s" x="196" y="331">the quoted turn must be the agent&#8217;s, and real</text>
+  <rect x="515" y="307" width="130" height="22" rx="3" fill="#eaf1fe" stroke="#4285F4" stroke-opacity=".6"/>
+  <text class="s" x="580" y="322" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">&#10022;</tspan> Flash (high)</text>
+  <line class="arw" x1="420" y1="346" x2="420" y2="356" marker-end="url(#a)"/>
+
+  <rect class="kb" x="180" y="360" width="480" height="56" rx="5"/>
+  <rect class="r-eda" x="181" y="361" width="478" height="6" rx="3"/>
+  <text class="t" x="196" y="382">FILTER 3 &#183; filter decider</text>
+  <text class="s" x="196" y="401">reads both pools &#183; leans to recall</text>
+  <rect x="515" y="377" width="130" height="22" rx="3" fill="#eaf1fe" stroke="#4285F4" stroke-opacity=".6"/>
+  <text class="s" x="580" y="392" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">&#10022;</tspan> Flash (high)</text>
+  <line class="arw" x1="420" y1="416" x2="420" y2="426" marker-end="url(#a)"/>
+
+  <rect class="kb" x="180" y="430" width="480" height="56" rx="5"/>
+  <rect class="r-eda" x="181" y="431" width="478" height="6" rx="3"/>
+  <text class="t" x="196" y="452">VERIFY &#183; primary decider</text>
+  <text class="s" x="196" y="471">same retrieval, stricter test &#183; tightens precision</text>
+  <rect x="515" y="447" width="130" height="22" rx="3" fill="#fbeee8" stroke="#D97757" stroke-opacity=".6"/>
+  <text class="s" x="580" y="462" text-anchor="middle"><tspan fill="#D97757" font-weight="700">&#10035;</tspan> Sonnet</text>
+  <line class="arw" x1="420" y1="486" x2="420" y2="496" marker-end="url(#a)"/>
+
+  <rect class="box" x="180" y="500" width="480" height="56" rx="5"/>
+  <rect class="r-eda" x="181" y="501" width="478" height="6" rx="3"/>
+  <text class="t" x="196" y="522">SOFTEN &#183; wording</text>
+  <text class="s" x="196" y="541">rewrites the reason &#183; never changes the verdict</text>
+  <rect x="515" y="517" width="130" height="22" rx="3" fill="#eaf1fe" stroke="#4285F4" stroke-opacity=".6"/>
+  <text class="s" x="580" y="532" text-anchor="middle"><tspan fill="#4285F4" font-weight="700">&#10022;</tspan> Flash</text>
+  <line class="arw" x1="420" y1="556" x2="420" y2="566" marker-end="url(#a)"/>
+
+  <rect class="ok" x="180" y="570" width="480" height="56" rx="5"/>
+  <rect class="r-eda" x="181" y="571" width="478" height="6" rx="3"/>
+  <text class="t" x="196" y="592">FINAL VERDICT</text>
+  <text class="s" x="196" y="611">violation &#183; criterion &#183; severity &#183; evidence turns &#183; reason</text>
+
+  <!-- exits -->
+  <rect class="bad" x="20" y="360" width="140" height="56" rx="5"/>
+  <text class="l" x="90" y="382" text-anchor="middle">No violation</text>
+  <text class="s" x="90" y="400" text-anchor="middle">not scored</text>
+  <path class="dsh" d="M176,178 L100,178 L100,356" marker-end="url(#af)"/>
+  <text class="s" x="104" y="262">gate exit</text>
+  <path class="dsh" d="M176,388 L164,388" marker-end="url(#af)"/>
+  <path class="dsh" d="M176,458 L130,458 L130,420" marker-end="url(#af)"/>
+
+  <!-- ══ BAND 2 right — knowledge base ════════════════════════════ -->
+  <rect class="grp" x="740" y="150" width="930" height="570" rx="7"/>
+  <text class="cap" x="756" y="172" fill="#0a6a6e">KNOWLEDGE BASE &#8212; content authored by QC, platform run by EDA</text>
+
+  <rect class="box" x="756" y="186" width="190" height="46" rx="5"/>
+  <rect class="r-qc" x="757" y="187" width="188" height="6" rx="3"/>
+  <text class="l" x="851" y="206" text-anchor="middle">corpus.yaml</text>
+  <text class="s" x="851" y="223" text-anchor="middle">QC-authored</text>
+  <line class="arw" x1="950" y1="209" x2="968" y2="209" marker-end="url(#a)"/>
+
+  <rect class="kb" x="972" y="186" width="200" height="46" rx="5"/>
+  <rect class="r-eda" x="973" y="187" width="198" height="6" rx="3"/>
+  <text class="l" x="1072" y="206" text-anchor="middle">Ingest</text>
+  <text class="s" x="1072" y="223" text-anchor="middle">parse &#183; embed &#183; upsert</text>
+  <line class="arw" x1="1176" y1="209" x2="1194" y2="209" marker-end="url(#a)"/>
+
+  <rect class="box" x="1198" y="186" width="456" height="46" rx="5"/>
+  <rect class="r-eda" x="1199" y="187" width="454" height="6" rx="3"/>
+  <text class="l" x="1426" y="206" text-anchor="middle">BGE-M3 &#8212; Triton on a CPU instance</text>
+  <text class="s" x="1426" y="223" text-anchor="middle">embeddings for load and for query</text>
+  <path class="arw" d="M1072,236 L1072,258" marker-end="url(#a)"/>
+
+  <rect class="grp" x="756" y="262" width="898" height="200" rx="6"/>
+  <text class="s" x="770" y="282" fill="#0a6a6e">Postgres + pgvector &#8212; EDA</text>
+  <rect class="box" x="770" y="290" width="870" height="30" rx="4"/>
+  <text class="s" x="782" y="310">knowledge_info &#8212; policy group</text>
+  <line class="arw" x1="1205" y1="320" x2="1205" y2="330" marker-end="url(#a)"/>
+  <text class="s" x="1215" y="330">1 : N</text>
+  <rect class="box" x="770" y="334" width="870" height="34" rx="4"/>
+  <text class="s" x="782" y="356">knowledge_policy &#8212; entry &#183; <tspan fill="#0a6a6e" font-weight="700">severity</tspan> &#183; batch_id &#183; <tspan fill="#0a6a6e" font-weight="700">status</tspan></text>
+  <line class="arw" x1="980" y1="368" x2="980" y2="378" marker-end="url(#a)"/>
+  <line class="arw" x1="1430" y1="368" x2="1430" y2="378" marker-end="url(#a)"/>
+  <rect class="bad" x="770" y="382" width="420" height="44" rx="4"/>
+  <text class="s" x="980" y="401" text-anchor="middle">positive_embedding</text>
+  <text class="s" x="980" y="418" text-anchor="middle">768 vectors &#183; HNSW</text>
+  <rect class="ok" x="1220" y="382" width="420" height="44" rx="4"/>
+  <text class="s" x="1430" y="401" text-anchor="middle">carveout_embedding</text>
+  <text class="s" x="1430" y="418" text-anchor="middle">959 vectors &#183; HNSW</text>
+  <text class="s" x="770" y="450">delete an entry &#8594; its vectors cascade &#183; status OUTDATED retires one and keeps the audit trail</text>
+
+  <rect class="box" x="756" y="478" width="898" height="36" rx="5"/>
+  <rect class="r-eda" x="757" y="479" width="896" height="6" rx="3"/>
+  <text class="s" x="770" y="501">Sentence under review &#8212; one candidate turn from the scanner</text>
+  <line class="arw" x1="1205" y1="514" x2="1205" y2="526" marker-end="url(#a)"/>
+  <rect class="box" x="756" y="530" width="898" height="36" rx="5"/>
+  <rect class="r-eda" x="757" y="531" width="896" height="6" rx="3"/>
+  <text class="s" x="770" y="553">Embedded through the same CPU Triton service</text>
+  <line class="arw" x1="1205" y1="566" x2="1205" y2="578" marker-end="url(#a)"/>
+  <rect class="kb" x="756" y="582" width="898" height="40" rx="5"/>
+  <rect class="r-eda" x="757" y="583" width="896" height="6" rx="3"/>
+  <text class="s" x="770" y="606">ANN search over both HNSW indexes &#183; top-K each &#183; ef_search 200</text>
+  <line class="arw" x1="1205" y1="622" x2="1205" y2="634" marker-end="url(#a)"/>
+  <rect class="kb" x="756" y="638" width="898" height="44" rx="5"/>
+  <rect class="r-eda" x="757" y="639" width="896" height="6" rx="3"/>
+  <text class="t" x="770" y="656">Two pools &#8212; violations + carve-outs</text>
+  <text class="s" x="770" y="673">read by the filter decider and the primary decider</text>
+  <text class="s" x="756" y="706" fill="#a5322e">Startup check &#8212; corpus digest vs batch_id: scoring refuses to start on mismatch or unreachable store</text>
+
+  <!-- pools feed both decider stages -->
+  <path class="ret" d="M752,660 L714,660 L714,388 L664,388" marker-end="url(#ar)"/>
+  <path class="ret" d="M714,458 L664,458" marker-end="url(#ar)"/>
+
+  <!-- ══ BAND 3 — egress and the QC feedback loop ═════════════════ -->
+  <text class="cap" x="20"   y="750">DATA OUT &#8212; BACK TO IT</text>
+  <text class="cap" x="1004" y="750" fill="#0a6a6e">QC FEEDBACK &#8212; QC JUDGES, EDA APPLIES</text>
+  <path class="arw" d="M420,630 L420,732 L270,732 L270,754" marker-end="url(#a)"/>
+
+  <rect class="ext" x="180" y="758" width="180" height="52" rx="5"/>
+  <rect class="r-it" x="181" y="759" width="178" height="6" rx="3"/>
+  <text class="l" x="270" y="779" text-anchor="middle">SFTP &#8212; outgoing/</text>
+  <text class="s" x="270" y="796" text-anchor="middle">call_id_score.json</text>
+  <line class="arw" x1="364" y1="784" x2="382" y2="784" marker-end="url(#a)"/>
+
+  <rect class="box" x="386" y="758" width="170" height="52" rx="5"/>
+  <rect class="r-it" x="387" y="759" width="168" height="6" rx="3"/>
+  <text class="l" x="471" y="779" text-anchor="middle">RCS</text>
+  <text class="s" x="471" y="796" text-anchor="middle">validate &#183; transform</text>
+  <line class="arw" x1="560" y1="784" x2="578" y2="784" marker-end="url(#a)"/>
+
+  <rect class="box" x="582" y="758" width="180" height="52" rx="5"/>
+  <rect class="r-it" x="583" y="759" width="178" height="6" rx="3"/>
+  <text class="l" x="672" y="779" text-anchor="middle">Tethys CRM</text>
+  <text class="s" x="672" y="796" text-anchor="middle">written to the call record</text>
+  <line class="arw" x1="766" y1="784" x2="784" y2="784" marker-end="url(#a)"/>
+
+  <rect class="box" x="788" y="758" width="190" height="52" rx="5"/>
+  <rect class="r-it" x="789" y="759" width="188" height="6" rx="3"/>
+  <text class="l" x="883" y="779" text-anchor="middle">Collection Portal</text>
+  <text class="s" x="883" y="796" text-anchor="middle">dashboards &#183; reports</text>
+  <line class="arw" x1="982" y1="784" x2="1000" y2="784" marker-end="url(#a)"/>
+
+  <rect class="ext" x="1004" y="758" width="200" height="52" rx="5"/>
+  <rect class="r-it" x="1005" y="759" width="198" height="6" rx="3"/>
+  <text class="l" x="1104" y="779" text-anchor="middle">ITrisk VQC tool</text>
+  <text class="s" x="1104" y="796" text-anchor="middle">QC reviews the score</text>
+  <line class="arw" x1="1208" y1="784" x2="1226" y2="784" marker-end="url(#a)"/>
+
+  <rect class="prop" x="1230" y="758" width="200" height="52" rx="5"/>
+  <rect class="r-qc" x="1231" y="759" width="198" height="6" rx="3"/>
+  <text class="l" x="1330" y="779" text-anchor="middle">Proposal</text>
+  <text class="s" x="1330" y="796" text-anchor="middle">status NEW &#183; no vector yet</text>
+  <line class="arw" x1="1434" y1="784" x2="1452" y2="784" marker-end="url(#a)"/>
+
+  <rect class="kb" x="1456" y="758" width="214" height="52" rx="5"/>
+  <rect class="r-qc" x="1457" y="759" width="212" height="6" rx="3"/>
+  <text class="l" x="1563" y="779" text-anchor="middle">Human approval</text>
+  <text class="s" x="1563" y="796" text-anchor="middle">QC lead accepts or rejects</text>
+  <path class="arw" d="M1563,814 L1563,828" marker-end="url(#a)"/>
+
+  <rect class="kb" x="1004" y="832" width="666" height="48" rx="5"/>
+  <rect class="r-eda" x="1005" y="833" width="664" height="6" rx="3"/>
+  <text class="s" x="1018" y="853">Accepted &#8594; embedded on the CPU Triton &#8594; new batch_id, live at the next batch window</text>
+  <text class="s" x="1018" y="871">Rejected &#8594; proposal closed; nothing unapproved is ever reachable by retrieval</text>
+
+  <path class="ret" d="M1670,856 L1694,856 L1694,351 L1644,351" marker-end="url(#ar)"/>
+</svg>
+
+<div class="legend">
+  <span><i class="sw" style="background:#e2f0f0;border-color:#0a6a6e"></i><b>knowledge-backed</b> stage or store</span>
+  <span><i class="sw" style="background:#fbf2df;border-color:#8d5c07"></i><b>SFTP</b> exchange with IT, and IT&#8217;s own UI</span>
+  <span><i class="sw" style="background:#e6f3ec;border-color:#1a6b47"></i>carve-outs / final verdict</span>
+  <span><i class="sw" style="background:#fbeceb;border-color:#a5322e"></i>violations / exit without a score</span>
+  <span><i class="sw" style="background:#fff;border-color:#5d6c6c;border-style:dashed"></i>proposal &#8212; invisible to retrieval until approved</span>
+  <span><b style="color:#4285F4">&#10022;</b> Gemini &nbsp;&#183;&nbsp; <b style="color:#D97757">&#10035;</b> Claude &#8212; both on existing Databricks endpoints</span>
+</div>
+
+<p class="foot">
+<b>Where it runs.</b> Scoring is the Virtual QC batch inference job on Databricks in the NDAP account; NiFi moves files to and from the IT SFTP server; LLM calls go to the Databricks Model endpoint. BGE-M3 is served by Triton on a CPU instance.<br>
+<b>Open with IT.</b> The pgvector store is not placed in either deployment diagram yet &#8212; it has to sit in NDAP, reachable from the DBR private subnet. And attributing a QC rejection to the entry that caused it needs the decider&#8217;s cited corpus entry ids carried in the score record; today they exist but are emitted only under traces.
+</p>
+<table class="own">
+  <tr><th class="eda">EDA &#8212; this team</th>
+      <th class="qc">QC &#8212; business</th>
+      <th class="it">IT &#8212; RiskCS / platform</th></tr>
+  <tr>
+    <td>Runs the whole scoring pipeline: gates &#8594; scanner &#8594; evidence check &#8594; filter decider &#8594; primary decider &#8594; soften.</td>
+    <td>Authors <b>corpus.yaml</b> &#8212; decides what counts as a violation and at which severity.</td>
+    <td>Mediatel recording, RCS batching every ~2h, and the internal SFTP server that carries both directions.</td>
+  </tr>
+  <tr>
+    <td>Owns the knowledge platform: ingest, embedding on the CPU Triton, the pgvector store, retrieval and the two pools.</td>
+    <td>Reviews every score in the VQC tool and raises a <b>proposal</b> when a verdict is wrong.</td>
+    <td>Builds and runs the ITrisk VQC screen, including the proposal form and the approve / reject action.</td>
+  </tr>
+  <tr>
+    <td>Applies an approved proposal: embeds it, cuts a new <b>batch_id</b>, activates it at the next batch window.</td>
+    <td>Approves or rejects proposals. Nothing reaches retrieval without a QC lead accepting it.</td>
+    <td>Writes results into Tethys CRM and feeds the Collection Portal; fires the webhook at every hop.</td>
+  </tr>
+  <tr>
+    <td>Runs the Virtual QC batch inference job on Databricks in NDAP. The upstream <b>AI Core ASR</b> is EDA too, but a separate service.</td>
+    <td>Judges. QC does not edit the store directly and does not need to know its schema.</td>
+    <td>Provides the transcript, never the raw audio &#8212; the .wav does not reach this pipeline.</td>
+  </tr>
+</table>
+
+</div>

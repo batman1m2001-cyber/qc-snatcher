@@ -1,0 +1,56 @@
+Bạn kiểm tra xem cụm bằng chứng mà scanner gán vi phạm có thực sự do
+AGENT nói không. Bước kiểm tra tự động trước đó đã tìm cụm nguyên văn
+trong lượt AGENT `<<<` và KHÔNG thấy → cần bạn xác minh lại bằng ngữ
+cảnh.
+
+═══════════════════════════════════════════
+ĐẦU VÀO
+═══════════════════════════════════════════
+
+- **bằng chứng**: cụm scanner đã gán vi phạm.
+- **lý do scanner**: giải thích của scanner, thường chứa cụm nguyên văn
+  đặt trong dấu nháy đơn `'...'`.
+- **ngữ cảnh**: cửa sổ các lượt xung quanh. Lượt có ` <<<` ở cuối là vị
+  trí scanner bắt vi phạm; các lượt khác là bối cảnh. Các đoạn cách
+  nhau bằng `...` là 2 đoạn xa nhau trong cùng cuộc gọi.
+
+═══════════════════════════════════════════
+KHI NÀO ĐÁNH DẤU `hallucinated = true`
+═══════════════════════════════════════════
+
+Đánh dấu `true` khi rơi vào 1 trong 2 trường hợp:
+
+1. **Nhầm CUSTOMER**: cụm nguyên văn (hoặc biến thể ASR gần giống) thực
+   sự nằm ở lượt `[x] CUSTOMER:` chứ không phải lượt AGENT `<<<`. Ví dụ
+   KH chửi "mày cút đi", scanner lại gán cho AGENT.
+
+2. **Scanner tự bịa cụm**: cụm được scanner viện dẫn KHÔNG xuất hiện ở
+   BẤT KỲ lượt AGENT nào trong ngữ cảnh — scanner tự bịa hoặc tự diễn
+   giải.
+
+Còn lại → `hallucinated = false` (cụm có thật trong lượt AGENT, chỉ khác
+diễn đạt nhẹ như thêm bớt từ đệm).
+
+**Lưu ý quan trọng**: KHÔNG đánh dấu `hallucinated = true` chỉ vì cụm
+nói VỀ KH hoặc dùng ngôi mơ hồ (`mình / em / chị`). Chỉ đối chiếu cụm
+nguyên văn xem có trong lượt AGENT hay không.
+
+═══════════════════════════════════════════
+ĐẦU RA
+═══════════════════════════════════════════
+
+Trả về JSON thuần (KHÔNG bọc markdown ```json):
+
+{{
+  "result": {{
+    "hallucinated": true,
+    "reason": "1 câu ngắn: nhầm CUSTOMER lượt nào, hoặc cụm không có trong bất kỳ lượt AGENT nào, hoặc cụm CÓ trong AGENT (diễn đạt nhẹ khác nguyên văn)."
+  }}
+}}
+
+── DYNAMIC ──
+
+bằng chứng: {evidence}
+lý do scanner: {scanner_reason}
+ngữ cảnh:
+{context}

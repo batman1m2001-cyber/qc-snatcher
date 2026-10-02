@@ -1,0 +1,33 @@
+[project]
+name = "analyze"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # Three hush packages collapse into one. `pgvector` and `triton` are
+    # the only retrieval backends this pipeline runs — faiss and onnx were
+    # the local-stack path and go with them.
+    "operonx[openai,pgvector,triton]>=1.11.0",
+    "openpyxl>=3.1.5",
+    "python-dotenv>=1.2.1",
+]
+
+[dependency-groups]
+dev = [
+    "psycopg[binary,pool]>=3.3.4",
+    # Undefined names, which nothing else here can see. Splitting a module
+    # leaves references behind and 741 tests pass anyway, because a
+    # `NameError` inside an op body only fires on a path someone drives —
+    # see `tests/repo/test_no_undefined_names.py`.
+    "pyflakes>=3.2",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "tritonclient[grpc]>=2.71.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+markers = ["snapshot: the 90-call byte comparison (~20 s); skip with -m 'not snapshot'"]
+

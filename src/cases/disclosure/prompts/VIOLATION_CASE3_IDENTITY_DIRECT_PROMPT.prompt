@@ -1,0 +1,89 @@
+Xác định: **Customer có xác nhận là CHÍNH CHỦ NỢ hoặc NGƯỜI QUEN của chủ nợ không?** (Agent hỏi trực tiếp)
+
+**Xác nhận (true)** nếu Agent hỏi VÀ Customer xác nhận:
+1. **Chính chủ nợ**: Agent hỏi "Anh X phải không?", "Chị Y đúng không?" → Customer: "ừ", "ờ", "ok", "vâng", "dạ", "đúng", "đúng rồi", "đúng rồi ạ", "phải", "tôi đây"
+2. **Xác nhận đúng số**: Agent hỏi tên/danh tính → Customer: "đúng số rồi", "gọi đúng số rồi", "số này đúng rồi" → TÍNH LÀ xác nhận danh tính
+3. **Người quen**: Agent hỏi "Anh có quen chị X không?", "Anh là chồng chị X?" → Customer: "quen", "đúng", "là bạn/em/con tôi"
+
+**QUAN TRỌNG — xác nhận RỒI phủ nhận sau (chia 2 mức xác nhận, áp dụng khác nhau):**
+
+Có 2 mức độ xác nhận của Customer, confirm-then-deny ÁP DỤNG KHÁC NHAU cho từng mức:
+
+### (A) Xác nhận RÕ RÀNG / MẠNH — confirm-then-deny ÁP DỤNG → vẫn verified=true
+
+Phrase được coi là xác nhận MẠNH (phrase nhiều âm tiết, mang ngữ nghĩa khẳng định rõ):
+- "đúng rồi", "đúng rồi ạ", "đúng rồi anh", "đúng vậy", "đúng anh ạ", "đúng số rồi", "đúng số em ạ"
+- "phải", "phải rồi", "vâng đúng", "vâng đúng rồi", "vâng phải"
+- "tôi đây", "anh đây", "chị đây", "em đây", "[tên chính chủ] đây" (ví dụ: "anh xuân đây") — phải đi kèm ngôi xưng hô; "đây" đơn lẻ KHÔNG đủ vì có thể là phần của câu phủ nhận ("đây! đâu có vay nợ", "đây không phải tôi").
+- Phrase **xác nhận thô lỗ** (KH cộc cằn nhưng vẫn khẳng định): "bố mày đây", "bố mày đấy", "tao đây", "tao đấy", "nó đây" — KH bực bội/cộc cằn nhưng vẫn xác nhận chính là người Agent gọi. Đây là **xác nhận MẠNH** dù lời lẽ thô tục.
+- "tôi là [đúng tên Agent vừa hỏi]" (ví dụ Agent hỏi "anh A" → KH "tôi là A")
+- **Xác nhận lặp lại liên tục**: KH nói "ừ" hoặc "ờ" >= 3 lần liên tiếp sau câu hỏi danh tính → coi là xác nhận MẠNH (lặp lại nhiều lần khó còn là filler).
+
+Nếu Customer phát ra MỘT trong các phrase MẠNH ở trên khi Agent hỏi danh tính → **VẪN verified=true** dù SAU ĐÓ Customer đổi lời / phủ nhận. Lý do: tại thời điểm đó, CB đã nhận tín hiệu HỢP LỆ và đủ RÕ để tin và tiến hành trao đổi.
+
+Ví dụ (A):
+- Agent: "anh xuân chí nghe máy đúng không" → Customer: "đúng rồi ạ" → ... 5 phút sau Customer: "không ạ tôi không phải" → **verified=true**
+- Agent: "đây có phải số chị khánh hòa không" → Customer: "đúng rồi" → ... sau Customer: "tôi không phải khánh hòa" → **verified=true**
+- Agent: "anh A phải không ạ" → Customer: "phải" → ... sau Customer: "nhầm số rồi" → **verified=true**
+
+### (B) Xác nhận YẾU / FILLER — confirm-then-deny KHÔNG ÁP DỤNG khi có denial rõ sau đó
+
+Phrase được coi là YẾU (đơn âm tiết, có thể chỉ là tiếng đệm / âm dạ đầu câu trong khi KH đang nghe):
+- "ừ", "ừ ừ", "ờ", "ờ ờ"
+- "ok", "ô kê"
+- "vâng", "dạ" đứng đơn lẻ (không kèm "đúng/phải/anh ạ")
+
+Phrase YẾU CÓ THỂ là xác nhận thật khi KH thực sự công nhận, NHƯNG cũng có thể chỉ là filler. Quy tắc xử lý:
+
+- **Subcase B1**: Customer nói phrase YẾU + KHÔNG có denial rõ ràng nào sau đó trong cùng cuộc gọi → **verified=true** (cho qua, coi như xác nhận hợp lệ)
+- **Subcase B2**: Customer nói phrase YẾU + SAU ĐÓ có denial RÕ RÀNG (xem list dưới) → **verified=FALSE**. Lý do: phrase yếu nhiều khả năng là filler, không phải xác nhận thật; denial sau đó mới là câu trả lời thực sự của KH.
+- **Subcase B3 — Agent phải hỏi lại danh tính nhiều lần**: Customer nói phrase YẾU 1 lần + sau đó Agent BUỘC PHẢI HỎI LẠI danh tính (>= 2 lần hỏi xác minh cùng một tên) vì KH không trả lời rõ + KH **không lần nào** đưa ra xác nhận MẠNH (Group A) → **verified=FALSE**. Lý do: nếu KH đã "ừ" thật sự rồi thì Agent không phải hỏi lại. Việc Agent hỏi đi hỏi lại nhiều lần cùng câu xác minh chính là dấu hiệu chính KH chưa thực sự xác nhận. Phrase YẾU ban đầu chỉ là filler/tạp âm.
+
+  Ví dụ B3:
+  - Agent: "chị cúc nghe máy phải không" → KH: "ừ" → Agent (hỏi lại): "chị cúc nó nghe máy phải không chị" → KH: "có chuyện gì không cô" → Agent (hỏi lại): "cô là cô nguyễn thị kim cúc đang nghe..." → KH: "cái gì hông" → Agent tiết lộ → **verified=FALSE** (Agent đã hỏi 3 lần, KH chưa hề xác nhận rõ — "ừ" chỉ là filler ban đầu)
+  - **KHÔNG nhầm với voicemail/độc thoại**: nếu Agent chỉ gọi tên 1 lần rồi đọc nội dung khoản vay (không hỏi đi hỏi lại), B3 KHÔNG áp dụng — trường hợp này thuộc B1 (verified=true).
+
+**Phrase denial RÕ RÀNG (override phrase YẾU)**:
+- "không phải tôi", "anh không phải", "chị không phải", "em không phải", "tôi không phải [tên]"
+- "nhầm số rồi", "nhầm số đấy", "nhầm số em ơi", "không phải số này", "gọi nhầm rồi", "sai số rồi", "sai số nhé"
+- "em không có", "em không có tài khoản", "em không có khoản vay", "anh không có ạ"
+- "không em ạ", "không anh ạ", "không phải đâu", "đâu phải tôi" đứng đơn lẻ (đặc biệt là sau câu hỏi xác minh, không phải đệm)
+- **KH tuyên bố SĐT thuộc về CHÍNH HỌ (không phải người Agent đang tìm)** — bất kỳ biến thể nào kết hợp "số này" / "số của" với "mình" / "em" / "tôi" / "anh" / "chị" và "mới mua / mua mới / mới có / vừa mua":
+  + "số này là số của mình chứ"
+  + "số này là của em ạ", "số này là của tôi"
+  + "số này em mới mua", "số này em mua mới", "số này em mua mới được mấy tháng"
+  + "số này anh mới có", "số này em vừa mua"
+  + "số này là em mua mới"
+  Lý do: KH đang khẳng định SĐT thuộc về họ cá nhân, không phải SĐT chính chủ của người Agent đang gọi tìm → đây là phủ nhận danh tính rõ ràng.
+
+**KHÔNG tính là denial** (không hồi tố mất xác nhận YẾU/MẠNH ở trên):
+- Phàn nàn / cộc cằn / chửi mà KHÔNG phủ nhận tên: "mày hỏi làm gì", "chú gọi làm gì", "ngày nào cũng hỏi", "gọi hoài làm phiền", "đm hỏi cái gì", "thôi nói đi"
+- Hỏi tò mò: "có việc gì", "có chuyện gì", "nói đi xem nào"
+- Confusion về nội dung: "cái gì mà cái gì", "nói tôi không hiểu", "là sao là sao"
+- KH cấm trao đổi nhưng không phủ nhận danh tính: "đừng gọi nữa", "xóa số đi", "bỏ máy đi"
+- KH nói tục/khẳng định thô: "bố mày đây", "tao đấy" — đây là xác nhận (xem Group A).
+
+Ví dụ (B):
+- Agent: "anh A đúng không" → Customer: "ừ" → (không có denial nào trong cuộc gọi) → **verified=true** (B1)
+- Agent: "anh A đúng không" → Customer: "ừ ừ" → ... sau Customer: "không em ạ" → **verified=FALSE** (B2: filler bị override)
+- Agent: "anh B phải không ạ" → Customer: "dạ" → ... sau Customer: "anh không phải B đâu" → **verified=FALSE** (B2)
+- Agent: "chị Lan đúng không" → Customer: "ok" → ... sau Customer: "chị không phải Lan" → **verified=FALSE** (B2)
+- Agent: "anh hùng nghe máy phải không" → Agent (chỉ độc thoại): "anh thanh toán gấp khoản thẻ tín dụng quá hạn 60 ngày" → Customer: (im lặng / chỉ "dạ" 1 lần) → **verified=true** (B1, voicemail-style — Agent KHÔNG hỏi lại danh tính)
+- Agent: "chị cúc nghe máy phải không" → KH: "ừ" → Agent (hỏi lại): "chị cúc nó nghe máy phải không" → KH: "có chuyện gì không" → Agent (hỏi lại lần 3): "cô c quốc khúc chính chủ phải không" → KH: "cái gì hông" → Agent tiết lộ → **verified=FALSE** (B3: Agent hỏi 3 lần, KH chưa xác nhận rõ)
+
+**Lưu ý quan trọng — câu hỏi xác minh có thể bị thay đổi tên trong cùng cuộc gọi**:
+Nếu Customer xác nhận MẠNH (Group A: "đúng rồi ạ", "phải", ...) với tên ban đầu Agent hỏi (ví dụ "anh Chi"), rồi SAU đó Agent hỏi tên KHÁC (ví dụ "anh Trí") và Customer phủ nhận tên thứ hai → vẫn áp dụng (A) confirm-then-deny cho xác nhận ban đầu → **verified=true**. Phủ nhận tên khác không hồi tố làm mất xác nhận đầu.
+
+Ví dụ: Agent: "anh Chi đúng không" → KH: "đúng rồi ạ" → Agent tiết lộ → Agent hỏi lại "có phải anh Trí" → KH: "không ạ" → **verified=true** (Chi đã được xác nhận; "không" cho Trí là tên khác).
+
+**Không xác nhận (false)** nếu:
+- Agent không hỏi danh tính/quan hệ
+- Customer KHÔNG có lần xác nhận nào, nói "không", im lặng, mập mờ ngay từ turn đầu sau câu hỏi của Agent
+- Customer phủ nhận / nói "nhầm số", "không phải số này", "không phải tôi" **NGAY Ở TURN ĐẦU TIÊN** sau câu hỏi danh tính của Agent (KHÔNG có lần xác nhận nào trước đó). Đây là điểm phân biệt duy nhất với case "xác nhận rồi phủ nhận sau" ở trên — chỉ cần Customer đã từng nói "ừ/ờ/ok/đúng/..." dù chỉ một lần thì rơi vào rule trên, KHÔNG rơi vào rule này.
+
+Trả về XML:
+<verified>true/false</verified>
+<reason>Dẫn chứng ngắn gọn</reason>
+
+Nội dung cuộc gọi:
+{transcript}

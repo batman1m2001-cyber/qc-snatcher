@@ -1,0 +1,370 @@
+# Iconic-keyword pre-filter for v3 sentiment_agent.
+#
+# Purpose: cheap gate BEFORE the LLM scanner — drop ~70% of low-signal calls
+# so we only spend LLM tokens on ones likely to contain a violation.
+#
+# Compiled into a single case-insensitive regex; matched as substring against
+# concatenated AGENT-turn text. A file passes the filter if ≥1 phrase hits.
+#
+# Recall / cost measurement (pilot rounds 1..4 + 3.2, 1703 labeled audios):
+#   recall       = 79.9% (358 TP / 448 gold VP)
+#   filter_rate  = 30.7% (522 pass / 1703 total) → 69% LLM cost savings
+#   FN           = 90 real VPs missed → covered by ML filter layer (planned)
+#
+# On live batch (live_20260629, 5057 calls): only 3.8% pass through filter.
+# The gap between pilot (30%) and live (3.8%) is expected — pilot is curated
+# labeled data, live has many trivial calls (BT3 no-answer, quick cooperation).
+#
+# Groups are for organization only. Loader flattens all `phrases` lists and
+# compiles a single regex. Duplicates across groups are OK — dedup on load.
+#
+# Tune rules:
+#   - Prefer 2-token phrases (iconic, rare in benign context).
+#   - Add 3-4 token phrases only when 2-token form is too generic.
+#   - Add ASR variants of the same phrase as siblings (e.g. `linh linh`,
+#     `linh lan` for `linh tinh`).
+#   - Avoid single-word entries unless truly iconic (e.g. `đéo`, `địt`).
+
+groups:
+  attack_speech_style_c3:
+    description: "Gán nhãn cách KH nói / lập luận (C3, nhan_xet_cach_noi_kh)"
+    phrases:
+      - lan man
+      - vòng vo
+      - vòng vờ
+      - vòng vọ
+      - linh tinh
+      - linh linh    # ASR variant
+      - linh lan     # ASR variant
+      - linh lang    # ASR variant
+      - lung tung
+      - lằng nhằng
+      - tùm lum
+      - tùm lung
+      - phiến diện
+      - yêu sách
+      - khiếm nhã
+      - khiếm ngại
+      - cợt nhả
+      - cười cợt
+      - bịa chuyện
+      - vô trách nhiệm
+      - buồn cười
+      - làm trò
+      - giở trò
+      - kiếm chuyện
+      - không đáng tin
+      - chê bai
+      - vô lý
+      - bất lịch sự
+      - độc thoại
+      - hỏi ngược
+
+  command_impose_c8:
+    description: "Câu mệnh lệnh / áp đặt (C8, ra_lenh_ap_dat, ra_lenh_ap_dat_nghiem_trong)"
+    phrases:
+      - chen lời
+      - im đi
+      - câm đi
+      - câm mồm
+      - câm mẹ
+      - câm miệng
+      - ngậm mồm
+      - ngậm miệng
+      - dừng ngay
+      - cút đi
+      - biến đi
+      - biến ngay
+      - im ngay
+      - la làng
+      - la hét
+      - cầm tiền
+      - nhảy vào mồm
+      - cho mà nghe
+      - để tôi nói
+      - phải nghe này
+      - dừng ngay cái việc
+      - đừng có làm trò
+      - đừng có trao đổi
+      - đừng có hỏi
+      - đừng có nói
+      - đừng có làm
+      - đừng có bịa
+      - đừng có diễn
+      - đừng có hứa
+      - đừng có mang
+      - đừng dạ nữa
+      - đừng độc thoại
+      - đừng nhắc lại
+      - đừng lấy lý do
+      - đừng trình bày
+      - đừng mà cả
+      - đừng bao che
+      - muốn bao che
+
+  intent_labeling_c1:
+    description: "Gán ý đồ xấu (C1, gan_y_do_xau, gan_hanh_vi_tieu_cuc, gan_gia_vo)"
+    phrases:
+      - cố tình
+      - cố ý
+      - hứa lèo
+      - hứa suông
+      - giả ngu
+      - giả điếc
+      - giả ngơ
+      - giả câm
+      - giả nai
+      - giả bộ
+      - trốn tránh
+      - trốn nợ
+      - chây ỳ
+      - chây ì
+      - chây í
+      - bao che
+      - lật mặt
+      - trở mặt
+      - nói dối
+      - nói xạo
+      - nói phét
+      - bốc phét
+      - ăn quỵt
+      - ăn cướp
+      - lừa đảo
+      - bịp bợm
+      - giật nợ
+      - dối trá
+      - bùng tiền
+      - xù nợ
+      - lật lọng
+      - lươn lẹo
+      - lươn khươn
+      - điêu toa
+      - gian dối
+      - mạo danh
+      - khủng bố
+      - vu khống
+      - chủ quan       # ý chí / nhận định chủ quan
+      - hứa hẹn cho có
+      - hứa cho vui
+
+  legal_labeling_c2:
+    description: "Từ pháp lý gán cho KH (C2)"
+    phrases:
+      - chiếm dụng vốn
+      - lạm dụng tín nhiệm
+      - chiếm đoạt tài sản
+
+  identity_c4_c5:
+    description: "Cáo buộc nhân thân / phán xét lối sống (C4, C5, ha_thap_pham_chat)"
+    phrases:
+      - con nợ
+      - bố láo
+      - vô văn hóa
+      - mất dạy
+      - vô học
+      - thất học
+      - hỗn láo
+      - hỗn xược
+      - láo toét
+      - láo nháo
+      - khốn nạn
+      - khốn kiếp
+      - thất đức
+      - mất nết
+      - bát nháo
+      - nhố nhăng
+      - vô phúc
+      - vô liêm sỉ
+      - vô đạo đức
+      - vô lương tâm
+      - chơi bời
+      - ăn chơi
+      - đua đòi
+      - bớt ăn
+      - trách móc
+      - khinh miệt
+      - lớn tuổi rồi mà
+      - lớn tuổi mà lại
+
+  cognitive_downgrade:
+    description: "Hạ thấp nhận thức / phẩm chất (ha_thap_nhan_thuc)"
+    phrases:
+      - ngu ngốc
+      - ngu xuẩn
+      - ngu xi
+      - ngu người
+      - thần kinh
+      - đầu đất
+      - chậm hiểu
+      - thiểu năng
+      - não ngắn
+      - mất não
+      - không có não
+      - không đủ tư cách
+      - không đủ nhận thức
+      - nghĩ mình là ai
+      - không thấy xấu hổ
+      - không biết xấu hổ
+      - không biết điều
+      - không biết nghĩ
+      - không chịu hiểu
+      - có ý thức trả nợ
+      - ý thức trả nợ
+
+  slur_comparison:
+    description: "So sánh gán nhãn (so_sanh_gan_nhan)"
+    phrases:
+      - thằng chó
+      - con chó
+      - chó đẻ
+      - súc vật
+      - thằng điên
+      - con điên
+      - con đĩ
+      - con ngu
+      - thằng ngu
+      - loại người
+      - hạng người
+      - dạng người
+      - loại rác
+      - loại trời đánh
+      - loại quạ mổ
+      - cái dạng này
+      - cái loại người
+      - cái tầm này
+      - có phải trẻ con
+      - trao đổi với trẻ con
+
+  family_insult:
+    description: "Xúc phạm gia đình (xuc_pham_gia_dinh)"
+    phrases:
+      - mẹ mày
+      - bố mày
+      - con mẹ mày
+      - bà nội mày
+      - mẹ cha mày
+      - cả lò
+      - cả nhà mày
+      - mẹ kiếp
+      - tiên sư
+      - tổ sư
+      - chết cha
+
+  vulgar_n3:
+    description: "Thô tục (tho_thien, N3)"
+    phrases:
+      - đéo
+      - đếch
+      - địt
+      - vl
+      - vkl
+      - đm
+      - mày
+      - tao
+      - chửi
+      - kệ mẹ
+      - kệ bố
+      - kệ mày
+      - ngoác mồm
+      - ngoạc mồm
+      - gào mồm
+      - mở mồm
+      - sủa
+      - vớ vẩn
+      - xàm xí
+      - tào lao
+      - tầm phào
+      - nói nhảm
+      - văng tục
+      - chửi bậy
+      - chửi bân      # ASR variant
+      - chửi bợi      # ASR variant
+      - chửi bới
+      - chửi bọ       # ASR variant
+      - chửi mắng
+      - cái đéo gì
+
+  threat_pressure:
+    description: "Đe dọa / áp lực tâm lý (de_doa, ap_luc_tieu_cuc, ap_luc_tam_ly)"
+    phrases:
+      - kề dao
+      - đào mả
+      - đào mộ
+      - liệu hồn
+      - coi chừng
+      - chết đi
+      - cứ kiện
+      - ra tòa
+      - khởi kiện
+      - làm xấu lịch sử
+
+  physical_shame:
+    description: "Xúc phạm ngoại hình / tình trạng (xuc_pham_ngoai_hinh)"
+    phrases:
+      - mắt lác
+      - mắt lé
+      - dở người
+      - dở chứng
+
+  mocking_c11:
+    description: "Chế giễu hành vi / mỉa mai (che_gieu_hanh_vi, mia_mai C11)"
+    phrases:
+      - đóng kịch
+      - diễn vừa thôi
+      - vô dụng
+      - bất tài
+      - vô tích sự
+      - ăn hại
+      - ăn bám
+      - vô công
+      - muối bỏ bể
+      - em thừa biết
+      - em tự hào
+      - rất tự hào
+      - cứ chửi đi
+      - chửi tiếp
+      - chửi tiếp đi
+      - chửi câu khác
+      - còn biết nói
+      - biết nói từ
+
+  provocation:
+    description: "Khiêu khích (khieu_khich, thach_thuc_doi_dau)"
+    phrases:
+      - tưởng mình
+      - giỏi nhỉ
+      - ghê gớm
+      - qua mặt em
+      - qua mặt anh
+
+  offense_accusation_c6:
+    description: "Cáo buộc xúc phạm (C6)"
+    phrases:
+      - xúc phạm em
+      - xúc phạm ai
+      - xúc phạm ngân hàng
+      - xúc phạm nhân viên
+      - xúc phạm người khác
+
+  repetition_disparagement:
+    description: "Câu chất vấn / phán xét lặp lại (C3, C4 patterns)"
+    phrases:
+      - lặp đi lặp lại
+      - sao lại thái độ
+      - thái độ kiểu gì
+      - trao đổi kiểu gì
+      - ăn nói kiểu gì
+      - nói chuyện kiểu gì
+      - hiểu kiểu gì
+      - có gì đáng cười
+      - đáng cười hả
+      - chỉ được cái nói
+      - toàn nói mồm
+      - nói mà không làm
+      - vay hộ vay ké
+      - không cần trả nợ
+      - không dám nhận
+      - bận cái gì
+      - sao mình lại
+      - cầm tiền để
+      - cầm tiền ra

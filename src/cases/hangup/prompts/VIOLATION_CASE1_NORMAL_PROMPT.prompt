@@ -1,0 +1,121 @@
+Phân tích vi phạm **"Cố tình ngắt máy"**.
+
+Bối cảnh:
+- Hệ thống rule-based đã xác định **agent là người chủ động ngắt máy** và **KH có phản hồi** (có turn KH).
+- Nhiệm vụ: xác định việc agent ngắt máy này có vi phạm hay không.
+
+═══════════════════════════════════════════════════════════════════════════
+**NGUYÊN TẮC CHUNG — Mặc định KHÔNG VP**
+═══════════════════════════════════════════════════════════════════════════
+
+Ngắt máy chỉ VI PHẠM khi RÕ RÀNG agent chủ động cắt một KH đang trao đổi có nội dung mà không có bất kỳ closure/lý do nào. Trong mọi trường hợp khác → KHÔNG VP.
+
+**Quy tắc thời gian (CỰC KỲ QUAN TRỌNG)**:
+- Nếu agent đã có turn closure (cảm ơn / chào / xin phép ngắt máy / ghi nhận / nêu lý do) thì **mọi turn KH xảy ra ĐỒNG THỜI hoặc SAU đó được coi là overlap/trailing**, KHÔNG phải bằng chứng agent cắt ngang.
+- V2T thường ghép timestamp lệch ~1-2s. Một turn KH 1-3 từ ("ờ", "ừ", "đợi anh tí", "tiếp", "anh") xuất hiện chồng lên hoặc ngay sau closure của agent → KHÔNG tính là "agent cắt KH".
+- Chỉ tính "agent cắt ngang" khi agent có turn THÊM nội dung MỚI/ngắt máy NGAY khi KH đang nói câu hoàn chỉnh có nội dung thực sự về khoản vay / kế hoạch / thông tin và agent chưa từng có bất kỳ closure nào trước đó.
+
+═══════════════════════════════════════════════════════════════════════════
+**LỖI 4 — Agent xin phép ngắt máy ngay sau phản hồi đầu của KH**
+═══════════════════════════════════════════════════════════════════════════
+
+- **VI PHẠM** nếu cùng lúc:
+  + Agent chào hỏi/xác nhận danh tính → KH phản hồi mang tính sẵn sàng ("ừ", "ờ", "có việc gì", "sao", "gì thế", "có gì không") → Agent xin phép ngắt máy NGAY mà CHƯA trao đổi nội dung chính nào.
+
+- **KHÔNG VP** nếu KH thuộc bất kỳ tình huống:
+  + KH báo bận / đang đi đường / đang đi làm / hẹn gọi lại ("sáng mai gọi lại", "sau 9 giờ"...).
+  + Tiếng nhạc chờ / tút tút.
+  + Trợ lý ảo / AI nghe máy: "ai gọi vậy ạ", "anh chị gọi có việc gì", "mình gọi đúng số", "trợ lý ảo của nhà mạng", "trợ lý nghe máy", "chủ thuê bao đang ngoài vùng phủ sóng", "đang ghi âm cuộc gọi".
+  + Tổng đài báo thuê bao tạm thời không liên lạc được.
+  + Tiếng Anh.
+  + KH báo không phải / sai số / nhầm số / "không quen anh chị X".
+  + KH chửi / yêu cầu không gọi nữa.
+  + KH báo đã thanh toán → agent ghi nhận + chào.
+  + KH chỉ "ờ/ừ/dạ" rời rạc không có nội dung.
+
+═══════════════════════════════════════════════════════════════════════════
+**LỖI 5 — Agent ngắt máy ngang khi đang trao đổi, chưa có closure**
+═══════════════════════════════════════════════════════════════════════════
+
+- **VI PHẠM** chỉ khi ĐỦ CẢ 3 ĐIỀU KIỆN:
+  1. KH có một turn ngay trước khi cuộc gọi kết thúc đang nói nội dung HOÀN CHỈNH có nghĩa (về khoản vay, ngày trả nợ, lý do chậm, yêu cầu thông tin...).
+  2. Agent KHÔNG có bất kỳ closure nào (không cảm ơn / không chào / không xin phép / không ghi nhận / không nêu lý do) trước hoặc đồng thời với khi KH dừng.
+  3. Cuộc gọi kết thúc mà agent không hề nhắc đến việc kết thúc.
+
+- **KHÔNG VP** nếu THỎA bất kỳ điều kiện sau (đủ MỘT điều là KHÔNG VP, không cần đồng thời):
+
+  **(a) Agent có closure cơ bản** (bất kỳ biến thể):
+  - "em cảm ơn", "cảm ơn anh/chị", "chào anh/chị", "em xin phép", "chào anh/chị ạ".
+  - "cảm ơn chào anh chị ạ" (V2T ghép).
+  - V2T mistypes hợp lệ: "cảm ơn cho anh chị" = "cảm ơn, chào anh chị"; "dạ v ơn" = "dạ vâng / cảm ơn".
+
+  **(b) Đã trao đổi nội dung thực sự + agent kết bằng "sẽ xử lý / check lại / ghi nhận"**:
+  - Agent đã hỏi/đáp về khoản vay / thông tin / kế hoạch / số tiền / ngày trả.
+  - Sau đó agent kết bằng "dạ vâng" / "ô kê" / "thế" + "con để con check lại thông tin" / "em ghi nhận" / "ngân hàng sẽ liên hệ lại".
+  - VD: "dạ vâng cô để con check lại thông tin nhá cô chào cô ạ"
+  - VD: "em ghi nhận đã thanh toán nhá. cảm ơn anh ạ em chào anh"
+  - **KHÔNG áp dụng** nếu agent chỉ chào hỏi danh tính rồi cắt — chưa có trao đổi nội dung thật sự.
+
+  **(c) KH lan man / không hợp tác / không phản hồi rõ — agent ngắt máy có nêu LÝ DO**:
+  - Agent nêu lý do (KH lan man / im lặng / không hợp tác / công ty bắt máy không trao đổi) trong câu ngắt máy. Các pattern hợp lệ:
+    + "anh có sẵn sàng trao đổi không... không sẵn sàng trao đổi em xin phép ngắt máy"
+    + "em xin lỗi vì sự bất tiện này... em xin phép dừng máy tại đây"
+    + "em không nghe thấy phản hồi nên em xin ngắt máy ngân hàng sẽ liên hệ lại sau"
+    + "ngân hàng không nghe thấy mình trao đổi, em xin phép ngắt máy liên hệ cuộc gọi sau"
+    + "không phản hồi lại ngân hàng ngắt máy nhá, tiếp tục liên hệ cuộc gọi tiếp theo"
+    + "ghi nhận anh/chị không hợp tác trao đổi, ngân hàng liên hệ lần sau"
+    + "công ty bắt máy không trao đổi em xin phép liên hệ lại sau, cảm ơn anh ạ"
+    + "sao bây giờ nghe điện thoại thì toàn thả trôi thế này... chào chị" (agent than KH thả trôi + closure)
+  - Ngay cả khi KH có turn ngắn ("đợi anh tí", "rồi sẵn sàng", "ờ", "ừ") chồng lên hoặc sau câu ngắt máy → vẫn KHÔNG VP, vì agent đã có closure + lý do.
+
+  **(d) Agent gửi voicemail cho người nhà / BT3** (CG ngắn, agent monologue):
+  - "nhờ anh nhắn nội dung giúp em" / "chuyển lời nhắn giúp em".
+  - "ngân hàng vi pi banh trao đổi một số thông tin quan trọng".
+  - "nhờ anh/chị nhắn anh/chị X liên hệ với ngân hàng" / "nếu anh có quen anh/chị X nhờ anh".
+  - Cuộc gọi loại này thường < 20s, agent đọc 1 message; **dù KH có hỏi "cụ thể như thế nào", "ai gọi vậy" → vẫn KHÔNG VP** (đây là cấu trúc voicemail tiêu chuẩn, agent không bắt buộc phải tiếp tục).
+
+  **(e) Tín hiệu kỹ thuật ngoài kiểm soát**:
+  - Tiếng nhạc chờ / tút tút.
+  - Trợ lý ảo AI nghe máy.
+  - Thuê bao tạm thời không liên lạc được.
+  - Tiếng Anh.
+  - KH báo sai số / nhầm số.
+
+═══════════════════════════════════════════════════════════════════════════
+**KIỂM TRA TRƯỚC KHI KẾT LUẬN VI PHẠM**
+═══════════════════════════════════════════════════════════════════════════
+
+Trước khi kết luận VI PHẠM, hãy đối chiếu lần lượt:
+
+1. Turn cuối của agent có chứa bất kỳ từ closure nào không? ("cảm ơn", "chào", "xin phép", "ngắt máy", "liên hệ lại", "ghi nhận", "nhắn", "check lại", "dạ vâng") → Có ⇒ ưu tiên kiểm tra (a)(b)(c)(d).
+2. Turn KH cuối cùng có thật sự là câu HOÀN CHỈNH có nội dung, hay chỉ là vài từ rời rạc ("ờ", "ừ", "anh", "một", "tiếp", "đợi anh tí")? → Rời rạc/ngắn ⇒ overlap, KHÔNG phải bằng chứng cắt ngang.
+3. Có dấu hiệu KH lan man / không hợp tác (KH hỏi lạc đề, lặp lại lung tung, "thả trôi") không? → Có + agent có closure ⇒ áp dụng (c).
+4. CG có cấu trúc voicemail BT3 (agent monologue gửi nhắn) không? → Có ⇒ áp dụng (d).
+5. CG có tín hiệu kỹ thuật / KH bot không? → Có ⇒ áp dụng (e).
+
+Chỉ kết luận VI PHẠM nếu KHÔNG có dấu hiệu nào ở trên.
+
+═══════════════════════════════════════════════════════════════════════════
+**Cấm**
+═══════════════════════════════════════════════════════════════════════════
+
+- KHÔNG kết luận VI PHẠM chỉ vì có turn KH ngắn xuất hiện sau closure của agent (đây là V2T overlap, không phải cắt ngang).
+- KHÔNG yêu cầu agent phải xử lý hết câu hỏi của KH trong cấu trúc voicemail/Lỗi 5(c).
+- Lỗi 4 chỉ áp dụng khi agent ngắt máy NGAY SAU phản hồi đầu tiên của KH mà CHƯA trao đổi nội dung chính.
+
+Transcript được cho dưới dạng `[N] AGENT: ...` hoặc `[x] CUSTOMER: ...`, trong đó `N` là turn_idx của lượt AGENT (số nguyên, dùng để trích bằng chứng). Lượt CUSTOMER bị mask thành `[x]` — KHÔNG được trích idx của CUSTOMER.
+
+Trả về định dạng XML (không thêm bất cứ thông tin thừa nào):
+<result>
+<violation>true/false</violation>
+<reason>Lý do ngắn gọn (KHÔNG dùng ký tự đặc biệt &lt; &gt; &amp;)</reason>
+<evidence>
+  Danh sách turn_idx AGENT vi phạm, format: 3, 7, 12
+  (Chỉ điền số nguyên có xuất hiện trong `[N] AGENT:` ở transcript. KHÔNG bịa idx.)
+</evidence>
+</result>
+
+Lưu ý: Nếu không vi phạm, để trống tag <evidence>.
+
+Đây là nội dung cuộc gọi:
+{transcript}

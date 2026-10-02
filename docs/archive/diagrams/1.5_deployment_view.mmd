@@ -1,0 +1,45 @@
+flowchart LR
+    ITA["IT side<br/>call audio"]
+    SIN[["SFTP<br/>inbound"]]
+    YML["corpus.yaml<br/>QC-authored"]
+
+    subgraph OURS["Our platform"]
+        direction TB
+        ASR["ASR flow<br/>audio → transcript<br/>out of scope for this DAB"]
+        ING["<b>1 · Ingest</b><br/>load + embed + upsert<br/>runs before scoring"]
+        BATCH["<b>2 · Batch scoring</b><br/>the pipeline in §1.3"]
+    end
+
+    PG[("Postgres + pgvector<br/><b>knowledge store</b>")]
+    TRT["BGE-M3<br/>Triton inference service"]
+
+    subgraph LLM["Databricks endpoints — unchanged by this release"]
+        direction TB
+        FL["✦ Gemini 3 Flash · Flash (high)"]
+        SN["✳ Claude 4 Sonnet"]
+    end
+
+    SOUT[["SFTP<br/>outbound"]]
+    ITB["IT side<br/>QC scoring result"]
+
+    ITA --> SIN --> ASR --> BATCH
+    YML --> ING
+    ING --> TRT
+    ING --> PG
+    BATCH ==>|"startup check<br/>corpus digest vs batch_id"| PG
+    BATCH -->|"top-K retrieval"| PG
+    BATCH --> TRT
+    BATCH --> FL
+    BATCH --> SN
+    BATCH --> SOUT --> ITB
+
+    classDef kb  fill:#e2f0f0,stroke:#0a6a6e,stroke-width:2px,color:#08343a
+    classDef new fill:#e6f3ec,stroke:#1a6b47,stroke-width:1.5px,color:#0f3d29
+    classDef bad fill:#fbeceb,stroke:#a5322e,stroke-width:1.5px,color:#5a1c1a
+    classDef ext fill:#fbf2df,stroke:#8d5c07,stroke-width:1.5px,color:#4a3104
+    classDef gem fill:#eaf1fe,stroke:#4285F4,stroke-width:1.6px,color:#123a75
+    classDef cla fill:#fbeee8,stroke:#D97757,stroke-width:1.6px,color:#6b3320
+    class PG,ING kb
+    class LLM ext
+    class FL gem
+    class SN cla

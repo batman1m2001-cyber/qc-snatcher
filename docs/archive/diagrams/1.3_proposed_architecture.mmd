@@ -1,0 +1,34 @@
+flowchart TB
+    IN([Call])
+
+    subgraph L1["FILTER 1 &nbsp;·&nbsp; cheap gates"]
+        direction LR
+        SI[silent] --> BOT["bot check<br/>regex · new"] --> SH[short-call] --> KID["kid check<br/>✦ Gemini 3 Flash"]
+    end
+
+    subgraph L2["FILTER 2 &nbsp;·&nbsp; scanner"]
+        direction LR
+        SCAN["Scanner — generic violation rules<br/>✦ Gemini 3 Flash"] --> EV["Attribution · halu check<br/>✦ Flash (high)"]
+    end
+
+    L3["<b>FILTER 3 — filter decider</b><br/>reads both pools · leans to recall<br/>✦ Flash (high)"]
+    V["<b>VERIFY — primary decider</b><br/>same retrieval · tightens precision<br/>✳ Claude 4 Sonnet"]
+    SFT["Soften — wording only, never the verdict<br/>✦ Gemini 3 Flash"]
+    KB[("Knowledge base<br/>Postgres + pgvector")]
+
+    IN --> L1 --> L2 --> L3 --> V --> SFT --> OUT([Final verdict])
+    L1 -.->|gate exit| EXIT([No violation])
+    L3 -.->|no violation| EXIT
+    KB -.->|"top-K positives + top-K carve-outs"| L3
+    KB -.->|"the same two pools"| V
+
+    classDef kb  fill:#e2f0f0,stroke:#0a6a6e,stroke-width:2px,color:#08343a
+    classDef new fill:#e6f3ec,stroke:#1a6b47,stroke-width:1.5px,color:#0f3d29
+    classDef bad fill:#fbeceb,stroke:#a5322e,stroke-width:1.5px,color:#5a1c1a
+    classDef ext fill:#fbf2df,stroke:#8d5c07,stroke-width:1.5px,color:#4a3104
+    classDef gem fill:#eaf1fe,stroke:#4285F4,stroke-width:1.6px,color:#123a75
+    classDef cla fill:#fbeee8,stroke:#D97757,stroke-width:1.6px,color:#6b3320
+    class KB kb
+    class BOT new
+    class KID,SCAN,EV,L3,SFT gem
+    class V cla

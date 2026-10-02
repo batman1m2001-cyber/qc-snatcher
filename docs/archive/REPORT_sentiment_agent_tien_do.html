@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Virtual QC — Thái độ ĐTV · báo cáo hiện trạng và tiến độ cải tiến</title>
+<style>
+:root {
+  --paper:#f2f5f5; --surface:#ffffff; --sunken:#eaefef;
+  --line:#d3dbdb; --line-soft:#e4eaea;
+  --ink:#0f1717; --ink-2:#33403f; --muted:#5d6c6c;
+  --accent:#0a6a6e; --accent-w:#e2f0f0;
+  --ok:#1a6b47;    --ok-w:#e6f3ec;
+  --warn:#8d5c07;  --warn-w:#fbf2df;
+  --f-sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+  --f-mono:Consolas,"Cascadia Mono","SF Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#0b1111; --surface:#131c1c; --sunken:#0f1717;
+    --line:#263131; --line-soft:#1d2727;
+    --ink:#e7eeed; --ink-2:#c2cfce; --muted:#8fa1a0;
+    --accent:#4cbcc0; --accent-w:#102a2b;
+    --ok:#55bd8b;    --ok-w:#12261e;
+    --warn:#dca944;  --warn-w:#2a2213;
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#0b1111; --surface:#131c1c; --sunken:#0f1717;
+  --line:#263131; --line-soft:#1d2727;
+  --ink:#e7eeed; --ink-2:#c2cfce; --muted:#8fa1a0;
+  --accent:#4cbcc0; --accent-w:#102a2b;
+  --ok:#55bd8b;    --ok-w:#12261e;
+  --warn:#dca944;  --warn-w:#2a2213;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink-2);
+  font-family: var(--f-sans); font-size: 15px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1000px; margin: 0 auto; padding: 40px 24px 96px; }
+
+h1, h2, h3 { color: var(--ink); margin: 0; text-wrap: balance; }
+h1 { font-size: 28px; line-height: 1.2; letter-spacing: -.02em; }
+h2 { font-size: 20px; letter-spacing: -.01em; margin: 0 0 4px; }
+h3 { font-size: 15px; }
+p  { margin: 0 0 10px; }
+p:last-child { margin-bottom: 0; }
+strong, b { color: var(--ink); font-weight: 700; }
+em { font-style: normal; color: var(--accent); font-weight: 600; }
+.small { font-size: 13px; color: var(--muted); }
+
+header { border-bottom: 2px solid var(--accent); padding-bottom: 20px; }
+header .mark { width: 54px; height: 3px; background: var(--accent); border-radius: 99px; margin-bottom: 18px; }
+header .meta { display: flex; flex-wrap: wrap; gap: 4px 22px; font-size: 13px; color: var(--muted); margin-top: 14px; }
+header .meta b { color: var(--ink); font-weight: 600; }
+
+section { margin-top: 42px; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
+           color: var(--accent); display: block; margin-bottom: 6px; }
+.sec-lede { font-size: 15px; color: var(--muted); margin: 6px 0 16px; max-width: 80ch; }
+
+.msg { background: var(--accent-w); border: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+       border-radius: 6px; padding: 18px 22px; margin: 24px 0; font-size: 16px; line-height: 1.6; }
+
+.stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 18px; margin: 22px 0; }
+.stat { border-top: 3px solid var(--accent); padding-top: 12px; }
+.stat .v { display: block; font-size: 27px; font-weight: 700; color: var(--ink); letter-spacing: -.03em;
+           line-height: 1.05; font-variant-numeric: tabular-nums; }
+.stat .l { display: block; font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+.tbl { overflow-x: auto; margin: 14px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 11px; border-bottom: 1px solid var(--line-soft); }
+th { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--muted);
+     border-bottom: 1px solid var(--line); }
+tbody tr:last-child td { border-bottom: none; }
+tr.is-sum td { border-top: 1px solid var(--line); }
+td.n { font-family: var(--f-mono); color: var(--accent); font-weight: 700; width: 26px; font-variant-numeric: tabular-nums; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.was { color: var(--muted); }
+
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.card { background: var(--sunken); border: 1px solid var(--line-soft); border-radius: 5px; padding: 14px 16px; }
+.card h3 { margin-bottom: 5px; }
+.card p { font-size: 13.5px; color: var(--muted); }
+.card.ok  { background: var(--ok-w);     border-color: color-mix(in srgb, var(--ok) 24%, transparent); }
+.card.acc { background: var(--accent-w); border-color: color-mix(in srgb, var(--accent) 26%, transparent); }
+.tag { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+       color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 7px;
+       margin-bottom: 8px; background: var(--surface); }
+.tag.t-ok{color:var(--ok);} .tag.t-acc{color:var(--accent);}
+.note { border-left: 3px solid var(--accent); background: var(--accent-w); padding: 12px 16px;
+        border-radius: 0 5px 5px 0; margin: 16px 0; font-size: 14px; }
+.note.n-warn { border-left-color: var(--warn); background: var(--warn-w); }
+
+figure { margin: 18px 0; }
+figure svg { display: block; width: 100%; height: auto; color: var(--ink-2); }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.fig-t { font-size: 13px; font-weight: 700; fill: var(--ink); }
+.fig-l { font-size: 12.5px; font-weight: 600; fill: var(--ink); }
+.fig-s { font-size: 11px; fill: var(--muted); }
+.fig-n { font-size: 14px; font-weight: 700; fill: var(--ink); }
+.fig-box  { fill: var(--sunken);   stroke: var(--line);   stroke-width: 1.2; }
+.fig-hi   { fill: var(--accent-w); stroke: var(--accent); stroke-width: 1.5; }
+.fig-ok   { fill: var(--ok-w);     stroke: var(--ok);     stroke-width: 1.3; }
+.fig-wrn  { fill: var(--warn-w);   stroke: var(--warn);   stroke-width: 1.3; }
+.fig-soon { fill: none; stroke: var(--muted); stroke-width: 1.3; stroke-dasharray: 5 4; }
+.fig-zone { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 7 5; }
+.fig-axis { stroke: var(--line); stroke-width: 1.2; }
+.fig-arw  { stroke: var(--muted); stroke-width: 1.4; fill: none; }
+.fig-arwd { stroke: var(--muted); stroke-width: 1.3; fill: none; stroke-dasharray: 5 4; }
+
+@media (max-width: 760px) {
+  .stats, .g2 { grid-template-columns: 1fr; }
+  .wrap { padding: 28px 16px 64px; }
+  h1 { font-size: 22px; }
+}
+@page { size: A4; margin: 14mm 12mm; }
+@media print {
+  body { background: #fff; font-size: 10pt; }
+  .wrap { max-width: none; padding: 0; }
+  section { break-inside: avoid-page; margin-top: 22px; }
+  figure, .tbl, .note, .card, .msg { break-inside: avoid-page; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="mark"></div>
+  <h1>Virtual QC — tiêu chí Thái độ ĐTV<br>Báo cáo hiện trạng và tiến độ cải tiến</h1>
+  <div class="meta">
+    <span><b>Ngày</b> 15/09/2026</span>
+    <span><b>Phạm vi</b> tiêu chí Thái độ ĐTV — 6 tiêu chí còn lại không thay đổi</span>
+    <span><b>Đối chiếu</b> DAB ngày 08/09/2026 và nhật ký phát triển 28/01–14/09/2026</span>
+  </div>
+</header>
+
+<div class="msg">
+  Thời gian phát triển được mở rộng để <b>xử lý các vấn đề phát sinh trong quá trình kiểm thử</b> và
+  <b>từng bước hoàn thiện kiến trúc</b>. Mỗi giai đoạn đều tạo ra một cải tiến cụ thể, giúp hệ thống
+  ổn định hơn khi triển khai, thích ứng nhanh hơn với thay đổi nghiệp vụ, và
+  <b>giảm phụ thuộc vào đội kỹ thuật</b> trong việc cập nhật quy định.
+</div>
+
+<!-- ─────────── 1 · TỔNG QUAN ─────────── -->
+<section>
+  <span class="eyebrow">1 · Tổng quan</span>
+  <h2>Ba thay đổi có giá trị lâu dài</h2>
+  <div class="stats">
+    <div class="stat">
+      <span class="v">919 mục</span>
+      <span class="l">quy định nghiệp vụ được quản lý như <b>dữ liệu dùng chung</b>, không nằm trong mã chương trình</span>
+    </div>
+    <div class="stat">
+      <span class="v">82 %</span>
+      <span class="l">phản hồi của QC ở đợt rà soát gần nhất thuộc loại <b>xử lý bằng nội dung quy định</b>, không phải sửa mã nguồn</span>
+    </div>
+    <div class="stat">
+      <span class="v">18×</span>
+      <span class="l">chi phí vận hành thấp hơn — từ ~29.600 xuống ~1.670 USD/tháng</span>
+    </div>
+  </div>
+  <p class="small">Kết quả kiểm thử chấp nhận (UAT 21–25/08/2026) đã được trình và thông qua tại DAB ngày 08/09/2026, nên báo cáo này không nhắc lại. Nội dung dưới đây tập trung vào <b>các mốc phát triển và giá trị còn lại sau khi hoàn thành</b>.</p>
+</section>
+
+<!-- ─────────── 2 · CÁC MỐC ─────────── -->
+<section>
+  <span class="eyebrow">2 · Các mốc phát triển</span>
+  <h2>Mỗi giai đoạn giải quyết một yêu cầu phát sinh, và để lại một cải tiến</h2>
+
+  <figure>
+    <svg viewBox="0 0 920 200" role="img" aria-label="Dòng thời gian từ tháng 2 đến tháng 9 năm 2026 với bốn giai đoạn chính và một đợt kiểm thử ổn định hệ thống chồng lên tháng 8">
+      <rect class="fig-box" x="40"  y="30" width="548" height="38" rx="3"/>
+      <rect class="fig-hi"  x="592" y="30" width="106" height="38" rx="3"/>
+      <rect class="fig-box" x="702" y="30" width="163" height="38" rx="3"/>
+      <text class="fig-l" x="314" y="54" text-anchor="middle">1 · Hoàn thiện luồng xử lý ban đầu</text>
+      <text class="fig-s" x="645" y="46" text-anchor="middle">3 · Kiến trúc</text>
+      <text class="fig-s" x="645" y="60" text-anchor="middle">tri thức</text>
+      <text class="fig-s" x="783" y="46" text-anchor="middle">5 · Nền tảng</text>
+      <text class="fig-s" x="783" y="60" text-anchor="middle">dùng chung</text>
+
+      <rect class="fig-box" x="370" y="84" width="218" height="38" rx="3"/>
+      <text class="fig-s" x="479" y="100" text-anchor="middle">2 · Chuẩn hoá</text>
+      <text class="fig-s" x="479" y="114" text-anchor="middle">dữ liệu đánh giá</text>
+      <rect class="fig-wrn" x="700" y="84" width="165" height="38" rx="3"/>
+      <text class="fig-s" x="782" y="100" text-anchor="middle">4 · đối chiếu kết quả</text>
+      <text class="fig-s" x="782" y="114" text-anchor="middle">giữa các môi trường</text>
+
+      <line x1="40" y1="146" x2="880" y2="146" class="fig-axis"/>
+      <text class="fig-s" x="40"  y="166">02</text>
+      <text class="fig-s" x="150" y="166">03</text>
+      <text class="fig-s" x="260" y="166">04</text>
+      <text class="fig-s" x="370" y="166">05</text>
+      <text class="fig-s" x="480" y="166">06</text>
+      <text class="fig-s" x="590" y="166">07</text>
+      <text class="fig-s" x="700" y="166">08</text>
+      <text class="fig-s" x="810" y="166">09/2026</text>
+      <text class="fig-s" x="40"  y="192">Giai đoạn 2 chồng lên cuối giai đoạn 1, giai đoạn 4 chồng lên giai đoạn 5 — các việc chạy song song, không nối tiếp nhau.</text>
+    </svg>
+  </figure>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th style="width:3%"></th><th style="width:20%">Giai đoạn</th><th style="width:37%">Yêu cầu phát sinh</th><th>Cải tiến để lại</th></tr></thead>
+      <tbody>
+        <tr><td class="n">1</td>
+            <td><b>Hoàn thiện luồng xử lý ban đầu</b><br><span class="small">02 → 07/2026</span></td>
+            <td>Quy định nghiệp vụ liên tục được bổ sung. Toàn bộ quy định nằm trong câu lệnh xử lý, khiến khối câu lệnh tăng từ <b>5.524 lên 17.485 ký tự</b> và việc rà soát ngày càng khó.</td>
+            <td>Hoàn thiện luồng xử lý đầu-cuối, đồng thời xác định rõ nhu cầu chuyển sang cách quản lý quy định linh hoạt hơn.</td></tr>
+        <tr><td class="n">2</td>
+            <td><b>Chuẩn hoá dữ liệu đánh giá</b><br><span class="small">05 → 07/2026</span></td>
+            <td>Bộ dữ liệu chuẩn có <b>2.723 cuộc gọi được chấm tay</b> (645 cuộc UAT 2025, 1.703 cuộc pilot, 375 cuộc dữ liệu thực). Quy định tiếp tục được hoàn thiện trong quá trình triển khai, kéo theo bộ chuẩn phải cập nhật theo: rà soát 112 ca, <b>104 ca đổi nhãn</b> cho khớp quy định mới.</td>
+            <td>Bộ dữ liệu đánh giá phản ánh đúng quy định hiện hành, có lưu vết từng lần đổi nhãn kèm lý do. Đồng thời rút ra yêu cầu quyết định hướng đi tiếp: cần cơ chế cho phép quy định thay đổi mà <b>không phải dựng lại bộ chuẩn từ đầu</b>.</td></tr>
+        <tr><td class="n">3</td>
+            <td><b>Cải tiến kiến trúc tri thức</b><br><span class="small">07 → 08/2026</span></td>
+            <td>Số quy định và tình huống nghiệp vụ tăng nhanh, đòi hỏi cơ chế cập nhật không phụ thuộc vào việc sửa mã nguồn.</td>
+            <td>Quy định nghiệp vụ chuyển thành dữ liệu quản lý riêng, không nằm trong mã chương trình. Kho tăng <b>131 → 593 mục trong 5 tuần</b>, <b>không phát hành lại phần mềm lần nào</b>, và khối câu lệnh ngừng phình thêm.</td></tr>
+        <tr><td class="n">4</td>
+            <td><b>Đối chiếu kết quả giữa các môi trường</b><br><span class="small">01/08 → 09/2026</span></td>
+            <td>Kết quả chấm trên môi trường UAT và môi trường nội bộ không khớp nhau, trong khi cả hai đều trả về đầy đủ và đúng định dạng — không nhìn ra nguyên nhân từ kết quả. Mỗi vòng đối chiếu phải <b>chấm lại toàn bộ lô UAT</b> rồi so từng cuộc, nên mất nhiều thời gian.</td>
+            <td>Tách được chênh lệch thành hai loại. <b>Loại sửa được:</b> bộ nhớ đệm câu lệnh và 4 điểm lệch cấu hình giữa hai môi trường — nay hệ thống <b>dừng lại và nêu đúng nguyên nhân</b> trước khi chấm. <b>Loại vốn có:</b> mô hình cho kết quả khác nhau giữa hai lần chạy giống hệt, đo được <b>khoảng 27 % trường kết quả trên 272 cuộc</b>, do cơ chế xử lý theo lô phía nhà cung cấp. Từ đó dựng <b>công cụ tự kiểm chạy trước mỗi lần triển khai</b>: chấm một lô mẫu cố định, so với bản ghi chuẩn, và <b>phân biệt được sai lệch thật với dao động vốn có</b> — việc trước đó phải làm tay bằng cách chấm lại cả lô UAT.</td></tr>
+        <tr><td class="n">5</td>
+            <td><b>Hoàn thiện nền tảng dùng chung</b><br><span class="small">19/08 → 09/2026</span></td>
+            <td>Cần thống nhất với kiến trúc nền tảng được khuyến nghị và dùng đúng lược đồ dữ liệu do bên nền tảng cung cấp.</td>
+            <td>Chuyển xong sang kho dùng chung, và <b>kiểm chứng được là không làm đổi kết quả</b>: toàn bộ <b>1.611 trên 1.611</b> cách diễn đạt cho kết quả giống hệt nhau giữa kho cũ và kho mới, so trên thứ tự, tập kết quả và từng trường. Không có mô hình ngôn ngữ nào tham gia phép đo này. Việc đổi hạ tầng từ nay chỉ còn là thay cấu hình.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:30px">Cải tiến lớn nhất — quy định nghiệp vụ trở thành dữ liệu quản lý riêng</h3>
+  <p class="sec-lede">Đây là cải tiến của giai đoạn 3, và là thay đổi có giá trị lâu dài nhất. Trước đây mỗi lần nghiệp vụ đổi câu chữ là một lần phát hành phần mềm; nay quy định là dữ liệu, sửa xong nạp lại kho và có hiệu lực từ lô chấm kế tiếp.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th style="width:26%"></th><th style="width:33%">Trước</th><th>Hiện nay</th></tr></thead>
+      <tbody>
+        <tr><td><b>Nơi lưu quy định</b></td><td class="was">Bên trong câu lệnh xử lý, đóng gói theo phần mềm</td><td>Kho dữ liệu dùng chung, có phiên bản</td></tr>
+        <tr><td><b>Quy mô đang áp dụng</b></td><td class="was">Không thống kê được</td><td><b>81 nhóm · 919 mục · 1.611 cách diễn đạt</b></td></tr>
+        <tr><td><b>Nội dung do ai soạn</b></td><td class="was">Đội kỹ thuật diễn giải lại</td><td><b>QC soạn trực tiếp</b> — bản tháng 08/2026 dựng lại từ chính kết quả rà soát của QC</td></tr>
+        <tr><td><b>Sửa một quy định</b></td><td class="was">Sửa mã nguồn, kiểm thử, phát hành</td><td>Sửa nội dung, nạp lại kho, <b>có hiệu lực từ lô chấm kế tiếp</b></td></tr>
+        <tr><td><b>Khối câu lệnh</b></td><td class="was">17.485 ký tự và còn tăng</td><td>Ổn định, không tăng thêm từ 07/2026</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="g2">
+    <figure>
+      <svg viewBox="0 0 440 180" role="img" aria-label="Khối câu lệnh tăng từ 5.524 lên 17.485 ký tự trong giai đoạn 1">
+        <text class="fig-t" x="0" y="12">Câu lệnh · số ký tự</text>
+        <line x1="10" y1="140" x2="430" y2="140" class="fig-axis"/>
+        <rect class="fig-box" x="30"  y="103" width="60" height="37"  rx="2"/>
+        <rect class="fig-box" x="112" y="100" width="60" height="40"  rx="2"/>
+        <rect class="fig-box" x="194" y="65"  width="60" height="75"  rx="2"/>
+        <rect class="fig-box" x="276" y="51"  width="60" height="89"  rx="2"/>
+        <rect class="fig-wrn" x="358" y="32"  width="60" height="108" rx="2"/>
+        <text class="fig-s" x="60"  y="97"  text-anchor="middle">5.524</text>
+        <text class="fig-s" x="142" y="94"  text-anchor="middle">5.971</text>
+        <text class="fig-s" x="224" y="59"  text-anchor="middle">11.155</text>
+        <text class="fig-s" x="306" y="45"  text-anchor="middle">13.205</text>
+        <text class="fig-n" x="388" y="26"  text-anchor="middle">17.485</text>
+        <text class="fig-s" x="60"  y="156" text-anchor="middle">02</text>
+        <text class="fig-s" x="142" y="156" text-anchor="middle">05</text>
+        <text class="fig-s" x="224" y="156" text-anchor="middle">05</text>
+        <text class="fig-s" x="306" y="156" text-anchor="middle">06</text>
+        <text class="fig-s" x="388" y="156" text-anchor="middle">07</text>
+        <text class="fig-s" x="0"   y="176">Giai đoạn 1 — mỗi quy định mới làm câu lệnh dài thêm</text>
+      </svg>
+    </figure>
+    <figure>
+      <svg viewBox="0 0 440 180" role="img" aria-label="Kho quy định tăng từ 131 mục tháng 7 lên 919 mục tháng 9 năm 2026">
+        <text class="fig-t" x="0" y="12">Kho quy định · số mục</text>
+        <line x1="10" y1="140" x2="430" y2="140" class="fig-axis"/>
+        <rect class="fig-box" x="20"  y="124" width="44" height="16"  rx="2"/>
+        <rect class="fig-box" x="78"  y="109" width="44" height="31"  rx="2"/>
+        <rect class="fig-box" x="136" y="105" width="44" height="35"  rx="2"/>
+        <rect class="fig-box" x="194" y="96"  width="44" height="44"  rx="2"/>
+        <rect class="fig-box" x="251" y="83"  width="44" height="57"  rx="2"/>
+        <rect class="fig-box" x="309" y="68"  width="44" height="72"  rx="2"/>
+        <rect class="fig-ok"  x="366" y="28"  width="44" height="112" rx="2"/>
+        <text class="fig-s" x="42"  y="118" text-anchor="middle">131</text>
+        <text class="fig-s" x="273" y="77"  text-anchor="middle">470</text>
+        <text class="fig-n" x="388" y="22"  text-anchor="middle">919</text>
+        <text class="fig-s" x="42"  y="156" text-anchor="middle">07</text>
+        <text class="fig-s" x="273" y="156" text-anchor="middle">08</text>
+        <text class="fig-s" x="388" y="156" text-anchor="middle">09</text>
+        <text class="fig-s" x="0"   y="176">Giai đoạn 3 trở đi — quy định tăng ở tầng dữ liệu</text>
+      </svg>
+    </figure>
+  </div>
+  <p class="small">Hai biểu đồ cùng một nội dung nghiệp vụ, khác nơi lưu trữ. Sau 07/2026 quy định vẫn tiếp tục tăng, nhưng tăng ở nơi <b>sửa được mà không phát hành phần mềm</b>.</p>
+
+  <div class="note">
+    <b>Phần lớn phản hồi nghiệp vụ nay xử lý được bằng nội dung quy định.</b>
+    Ở đợt rà soát gần nhất, QC tự phân loại nguyên nhân cho từng ca cần xem lại:
+    <b>101 trên 123 ca (82 %)</b> chỉ cần bổ sung mẫu vi phạm hoặc ngoại lệ vào kho — chưa xét đúng ngữ cảnh
+    nghiệp vụ thu hồi nợ (49), chưa nhận diện hết trường hợp cần ghi nhận (22), chưa xét đúng ngữ cảnh giao tiếp (15),
+    nhận diện theo từ khoá (11), chưa khớp ngưỡng mức độ (4). <b>22 ca còn lại</b> liên quan khâu chuyển giọng nói
+    thành văn bản, thuộc phạm vi xử lý khác.
+  </div>
+  <p class="small">Bảng mô tả công việc đã thực hiện theo nhật ký phát triển; việc đối chiếu với kế hoạch và biên bản phê duyệt cần thực hiện riêng.</p>
+</section>
+
+<!-- ─────────── 5 · CHI PHÍ ─────────── -->
+<section>
+  <span class="eyebrow">3 · Chi phí vận hành</span>
+  <h2>Chi phí vận hành giảm 18 lần</h2>
+  <p class="sec-lede">Mức giảm đến từ <b>cách xử lý cuộc gọi</b>: thêm các lớp lọc rẻ trước khi gọi mô hình, và phân tầng mô hình theo độ khó của từng bước. Cả hai luồng cùng tính chi phí trên một nền tảng mô hình, nên đây không phải thay đổi thương mại.</p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th style="width:30%">Cách xử lý</th><th style="width:33%">Luồng cũ</th><th>Luồng mới</th></tr></thead>
+      <tbody>
+        <tr><td><b>Lọc trước khi gọi mô hình</b></td>
+            <td class="was">Không có — mọi cuộc gọi đều đi vào chuỗi mô hình</td>
+            <td><b>Nhiều lớp lọc rẻ</b> (danh sách từ khoá, các kiểm tra nhanh) chạy trước, không tốn phí mô hình. Cuộc gọi không khớp thì không bao giờ chạm tới bước tính phí</td></tr>
+        <tr><td><b>Mô hình trên đường chính</b></td>
+            <td class="was">Claude 4 Sonnet ở mọi bước — riêng bước phát hiện chiếm <b>93 %</b> tổng chi, vì nó chạy câu lệnh 17.485 ký tự trên toàn bộ nội dung của mọi cuộc gọi</td>
+            <td><b>Gemini 3 Flash</b> — chi phí thấp hơn nhiều, gánh phần lớn khối lượng</td></tr>
+        <tr><td><b>Bước xác minh cuối</b></td>
+            <td class="was">Claude 4 Sonnet</td>
+            <td><b>Claude 4 Sonnet — giữ nguyên</b>, nhưng chỉ chạy trên các cuộc đã được gắn cờ, không chạy đại trà</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th style="width:36%"></th><th class="num">Luồng cũ</th><th class="num">Luồng mới</th></tr></thead>
+      <tbody>
+        <tr><td>Cơ sở con số</td><td class="num was">ước tính</td><td class="num"><b>đo thật</b> — một ngày vận hành 35.215 cuộc</td></tr>
+        <tr><td>Chi phí mỗi cuộc gọi</td><td class="num was">0,0382 USD</td><td class="num"><b>0,0022 USD</b></td></tr>
+        <tr class="is-sum"><td><b>Chi phí mỗi tháng</b></td><td class="num was"><b>~29.600 USD</b></td><td class="num"><b>~1.670 USD</b></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">Chất lượng ở bước ra quyết định cuối không bị đánh đổi: mô hình mạnh vẫn giữ nguyên ở đúng chỗ cần nó. Ở đầu thận trọng hơn của thang quy đổi, mức tháng của luồng cũ là ~22.200 USD và tỷ lệ là 13 lần — kết luận không đổi.</p>
+  <div class="note"><b>Phân định rõ.</b> Kho quy định ở mục 2 <b>không phải nguyên nhân giảm chi phí</b> — nó phục vụ khả năng cập nhật quy định và độ chính xác. Chi phí giảm là do thay đổi ở chuỗi xử lý: lọc nhiều lớp trước, và chọn mô hình theo độ khó của từng bước. Hai cải tiến độc lập nhau.</div>
+</section>
+
+<!-- ─────────── 7 · PHỤ LỤC ─────────── -->
+<section>
+  <span class="eyebrow">Phụ lục</span>
+  <h2>Sơ đồ tổng quát — ai làm gì, và vòng phản hồi đi qua đâu</h2>
+  <p class="sec-lede">Ba vùng, phân tách bằng nét đứt. Vòng chạy ngược chiều kim đồng hồ: chấm điểm → kết quả → QC soát → đề xuất → phê duyệt → nạp kho → quay lại chấm điểm.</p>
+
+  <figure>
+    <svg viewBox="0 0 960 500" role="img" aria-label="Sơ đồ ba vùng: vùng kỹ thuật gồm bản ghi thoại, chấm điểm tự động và kết quả chấm; vùng kho quy định gồm nạp và kiểm phiên bản, kho quy định, và giao diện quản lý kho chưa triển khai; vùng QC gồm soát kết quả, đề xuất sửa quy định và phê duyệt">
+      <!-- vùng -->
+      <rect class="fig-zone" x="30" y="28"  width="900" height="112" rx="6"/>
+      <rect class="fig-zone" x="30" y="170" width="900" height="112" rx="6"/>
+      <rect class="fig-zone" x="30" y="312" width="900" height="112" rx="6"/>
+      <text class="fig-s" x="44" y="46">VÙNG KỸ THUẬT · LÕI CHẤM ĐIỂM</text>
+      <text class="fig-s" x="44" y="188">VÙNG KHO QUY ĐỊNH</text>
+      <text class="fig-s" x="44" y="330">VÙNG NGHIỆP VỤ · VÒNG PHẢN HỒI QC</text>
+
+      <!-- băng A -->
+      <rect class="fig-box" x="60"  y="62" width="220" height="56" rx="4"/>
+      <rect class="fig-hi"  x="350" y="62" width="240" height="56" rx="4"/>
+      <rect class="fig-box" x="660" y="62" width="220" height="56" rx="4"/>
+      <text class="fig-l" x="170" y="86"  text-anchor="middle">Bản ghi thoại cuộc gọi</text>
+      <text class="fig-s" x="170" y="102" text-anchor="middle">do hệ thống IT chuyển sang</text>
+      <text class="fig-l" x="470" y="86"  text-anchor="middle">Chấm điểm tự động</text>
+      <text class="fig-s" x="470" y="102" text-anchor="middle">Virtual QC — tiêu chí Thái độ ĐTV</text>
+      <text class="fig-l" x="770" y="86"  text-anchor="middle">Kết quả chấm</text>
+      <text class="fig-s" x="770" y="102" text-anchor="middle">trả về hệ thống IT</text>
+
+      <!-- băng B -->
+      <rect class="fig-box"  x="60"  y="204" width="220" height="56" rx="4"/>
+      <rect class="fig-ok"   x="350" y="204" width="240" height="56" rx="4"/>
+      <rect class="fig-soon" x="660" y="204" width="220" height="56" rx="4"/>
+      <text class="fig-l" x="170" y="228" text-anchor="middle">Nạp và kiểm phiên bản</text>
+      <text class="fig-s" x="170" y="244" text-anchor="middle">chạy trước khi chấm</text>
+      <text class="fig-l" x="470" y="228" text-anchor="middle">Kho quy định nghiệp vụ</text>
+      <text class="fig-s" x="470" y="244" text-anchor="middle">919 mục · 81 nhóm · QC soạn nội dung</text>
+      <text class="fig-l" x="770" y="228" text-anchor="middle">Giao diện quản lý kho</text>
+      <text class="fig-s" x="770" y="244" text-anchor="middle">đề xuất tiếp theo — chưa triển khai</text>
+
+      <!-- băng C -->
+      <rect class="fig-box" x="60"  y="346" width="220" height="56" rx="4"/>
+      <rect class="fig-box" x="350" y="346" width="240" height="56" rx="4"/>
+      <rect class="fig-box" x="660" y="346" width="220" height="56" rx="4"/>
+      <text class="fig-l" x="170" y="370" text-anchor="middle">Phê duyệt</text>
+      <text class="fig-s" x="170" y="386" text-anchor="middle">người có thẩm quyền</text>
+      <text class="fig-l" x="470" y="370" text-anchor="middle">Đề xuất sửa quy định</text>
+      <text class="fig-s" x="470" y="386" text-anchor="middle">QC nêu từ ca vừa soát</text>
+      <text class="fig-l" x="770" y="370" text-anchor="middle">QC soát kết quả</text>
+      <text class="fig-s" x="770" y="386" text-anchor="middle">trên công cụ VQC của IT</text>
+
+      <!-- mũi tên băng A -->
+      <path d="M282 90 H344" class="fig-arw"/><path d="M338 86 L346 90 L338 94 z" fill="var(--muted)"/>
+      <path d="M592 90 H654" class="fig-arw"/><path d="M648 86 L656 90 L648 94 z" fill="var(--muted)"/>
+
+      <!-- kết quả -> QC soát (vòng bên phải) -->
+      <path d="M880 90 H908 V374 H886" class="fig-arw"/><path d="M892 370 L884 374 L892 378 z" fill="var(--muted)"/>
+
+      <!-- băng C chạy sang trái -->
+      <path d="M658 374 H596" class="fig-arw"/><path d="M602 370 L594 374 L602 378 z" fill="var(--muted)"/>
+      <path d="M348 374 H286" class="fig-arw"/><path d="M292 370 L284 374 L292 378 z" fill="var(--muted)"/>
+
+      <!-- phê duyệt -> nạp -->
+      <path d="M170 344 V268" class="fig-arw"/><path d="M166 274 L170 266 L174 274 z" fill="var(--muted)"/>
+      <!-- nạp -> kho -->
+      <path d="M282 232 H344" class="fig-arw"/><path d="M338 228 L346 232 L338 236 z" fill="var(--muted)"/>
+      <!-- kho -> chấm điểm -->
+      <path d="M470 202 V126" class="fig-arw"/><path d="M466 132 L470 124 L474 132 z" fill="var(--muted)"/>
+
+      <!-- đường tương lai -->
+      <path d="M770 344 V268" class="fig-arwd"/><path d="M766 274 L770 266 L774 274 z" fill="var(--muted)"/>
+      <path d="M658 232 H596" class="fig-arwd"/><path d="M602 228 L594 232 L602 236 z" fill="var(--muted)"/>
+
+      <text class="fig-s" x="180" y="300">đội kỹ thuật nạp</text>
+      <text class="fig-s" x="482" y="160">đọc quy định khi chấm</text>
+      <text class="fig-s" x="782" y="300">về sau: QC sửa trực tiếp</text>
+
+      <!-- chú giải -->
+      <line x1="60" y1="462" x2="96" y2="462" class="fig-arw"/>
+      <text class="fig-s" x="104" y="466">đang vận hành</text>
+      <line x1="230" y1="462" x2="266" y2="462" class="fig-arwd"/>
+      <text class="fig-s" x="274" y="466">đề xuất tiếp theo, chưa triển khai</text>
+    </svg>
+    <figcaption><b>Cách đọc.</b> Nét liền là những gì đang chạy. Nét đứt là phần đề xuất tiếp theo: khi có giao diện quản lý kho, QC sửa thẳng quy định thay vì đi vòng qua đề xuất — phê duyệt — đội kỹ thuật nạp. Bước phê duyệt vẫn giữ, chỉ rút ngắn đoạn còn lại.</figcaption>
+  </figure>
+</section>
+
+</div>
+</body>
+</html>

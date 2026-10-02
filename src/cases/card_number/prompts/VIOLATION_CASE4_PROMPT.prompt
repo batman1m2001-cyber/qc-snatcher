@@ -1,0 +1,81 @@
+Phân tích vi phạm: **Agent CHỦ ĐỘNG ĐỌC ĐỦ 16 chữ số in dập nổi trên thẻ tín dụng/ghi nợ của KH**.
+
+# QUY TẮC ĐẾM CHỮ SỐ TIẾNG VIỆT
+Chỉ tính các từ sau là **chữ số raw** (đơn vị 0-9):
+- 0: "không", "linh"
+- 1: "một", "mốt"
+- 2: "hai"
+- 3: "ba"
+- 4: "bốn", "tư"
+- 5: "năm", "lăm"
+- 6: "sáu"
+- 7: "bảy", "bẩy"
+- 8: "tám"
+- 9: "chín"
+
+**KHÔNG TÍNH** là chữ số:
+- Ký tự chữ cái phát âm: "a", "bê" (B), "tê" (T), "pê" (P), "phê" (Pf), "ê" (E), "em", "m", "ô", "đê", "i", ...
+- Đơn vị tiền: "triệu", "nghìn", "trăm", "mươi", "tỷ", "đồng"
+- Đơn vị thời gian: "tháng", "năm tháng", "ngày", "giờ", "phút", "giây"
+
+# QUY TẮC QUYẾT ĐỊNH
+
+## VI PHẠM (chỉ khi thoả **TẤT CẢ** điều kiện sau):
+1. **Agent CHỦ ĐỘNG ĐỌC** (không phải KH đọc, không phải agent yêu cầu KH đọc/nhập)
+2. Đọc **đúng 16 chữ số raw** trong các câu nói LIỀN MẠCH (cùng 1 turn hoặc các turn liên tiếp), có thể đọc liền hoặc nhóm 4-4-4-4 / 4-6-6
+3. Có **ngữ cảnh số thẻ rõ ràng** trong cùng câu/đoạn: "số thẻ", "số in nổi/in dập", "16 số trên thẻ", "card number", "thẻ tín dụng số"
+
+## KHÔNG VI PHẠM (bất kỳ trường hợp nào dưới đây):
+1. **Đếm < 16 chữ số raw** trong lời thoại agent — kể cả khi có cụm "số thẻ"
+2. **Số đọc có lẫn ký tự chữ** (bê/tê/pê/phê/...) — đó là **số hợp đồng thẻ rút gọn/đã mask**, KHÔNG phải 16 chữ số in dập trên thẻ
+3. **Agent chỉ NHẮC ĐẾN** số thẻ, không đọc con số nào — VD: "anh chuyển vào 16 số trên thẻ", "số trên mặt thẻ", "anh nhập 16 số"
+4. **Agent HƯỚNG DẪN KH** tự đọc/nhập — VD: "anh nhập số thẻ vào app", "anh kiểm tra trên mặt thẻ", "anh đọc lại số thẻ"
+5. **Agent đọc mã KHÁC**: số tài khoản (10-14 số), CIF (7-10 số), số hợp đồng thẻ (mask có chữ), số giao dịch, mã OTP
+6. **Số liên quan tiền/ngày/giờ/SĐT** — số tiền (kèm "triệu/nghìn/đồng"), ngày tháng năm, giờ phút, số điện thoại
+7. **KH tự đọc** số thẻ — chỉ xét lời thoại agent
+
+# QUY TRÌNH KIỂM TRA BẮT BUỘC
+Trước khi kết luận, **bắt buộc** thực hiện 4 bước sau theo thứ tự:
+
+**Bước 1**: Tìm các câu nói của agent có cụm từ "số thẻ" / "thẻ tín dụng số" / "số in dập" / "16 số" / "card number".
+
+**Bước 2**: Trong các câu đó, trích chuỗi số agent đọc.
+
+**Bước 3**: ĐẾM CHÍNH XÁC từng chữ số raw (theo bảng ở đầu prompt). KHÔNG đếm ký tự chữ, đơn vị tiền, đơn vị thời gian.
+
+**Bước 4**: Áp dụng rule:
+- Nếu đếm được **đúng 16** AND không thuộc trường hợp KHÔNG VI PHẠM → **VI PHẠM**
+- Nếu đếm < 16 → **KHÔNG VI PHẠM**, BẤT KỂ ngữ cảnh nói gì
+- Nếu đếm > 16 (rất hiếm) → kiểm tra xem có phải agent ghép nhiều mã (số thẻ + số tài khoản + ...) không. Nếu phần số thẻ đúng 16 → VI PHẠM.
+
+**TUYỆT ĐỐI KHÔNG kết luận VI PHẠM khi `digits_counted < 16`.**
+
+# VÍ DỤ MINH HOẠ
+| Lời thoại agent | Số thẻ thực | digits_counted | Verdict |
+|---|---|---|---|
+| "số thẻ là không năm tư bảy bốn chín sáu bảy ba bảy" | 0547496 7 3 7 | 10 | **Không vi phạm** |
+| "số thẻ là ba hai năm pê hai năm sáu hai tám hai bốn" | 325 P 2562824 | 10 (không tính pê) | **Không vi phạm** |
+| "anh chuyển vào 16 số trên thẻ giúp em" | — | 0 | **Không vi phạm** |
+| "anh nhập đủ mười sáu số đấy vào app" | — | 0 | **Không vi phạm** |
+| "số thẻ là một hai ba bốn năm sáu bảy tám chín không một hai ba bốn năm sáu" | 1234567890123456 | 16 | **VI PHẠM** |
+| "bốn số đầu một hai ba bốn, bốn tiếp năm sáu bảy tám, bốn tiếp chín không một hai, bốn cuối ba bốn năm sáu" | 1234 5678 9012 3456 | 16 | **VI PHẠM** |
+| "thẻ chị quá hạn ba ngày, dư nợ hai triệu sáu trăm nghìn" | — | 6 (nhưng là tiền/ngày, không phải thẻ) | **Không vi phạm** |
+
+# OUTPUT FORMAT
+Transcript được cho dưới dạng `[N] AGENT: ...` hoặc `[x] CUSTOMER: ...`, trong đó `N` là turn_idx của lượt AGENT. Lượt CUSTOMER bị mask `[x]` — KHÔNG được trích idx CUSTOMER.
+
+Trả về **CHÍNH XÁC** XML sau, không thêm chữ ngoài XML:
+<result>
+<digits_counted>Số chữ số raw đếm được trong chuỗi đọc số thẻ (số nguyên)</digits_counted>
+<violation>true/false</violation>
+<reason>Lý do ngắn gọn 1 câu, kèm con số chữ số đã đếm</reason>
+<evidence>
+  Danh sách turn_idx AGENT gây vi phạm (chỉ khi VI PHẠM), format: 3, 7, 12
+  (Chỉ điền số nguyên có xuất hiện trong `[N] AGENT:`. KHÔNG bịa idx.)
+</evidence>
+</result>
+
+Lưu ý: Không vi phạm thì để trống <evidence>.
+
+Nội dung cuộc gọi:
+{transcript}

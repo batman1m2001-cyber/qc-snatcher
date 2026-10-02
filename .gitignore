@@ -1,0 +1,115 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+.env
+# ...and any hand-made copy of it. `.env` alone does not match
+# `.env.bak.20260914105056`, and a backup of the key file is the
+# same secret sitting one `git add -A` away from a commit.
+.env.*
+# ...but a checked-in template is the point, so let one through.
+!.env.example
+.venv/
+venv/
+
+# Cache
+cache/
+
+# Dataset
+poc_round_5/
+pilot/
+data/
+
+# Outputs (broad rule for pipeline scratch outputs)
+outputs/
+# … but the selfcheck golden baseline lives inside tests/sample/fixtures/outputs
+# and must be committed.
+!tests/sample/fixtures/outputs/
+
+# Local traces
+traces/
+
+# Pipeline log files
+logs/
+
+# Temp working dirs (consistency runs, refresh scratch, etc.)
+tmp/
+
+# Torch wheel
+wheels/torch-*.whl
+
+# IDE
+.vscode/
+.idea/
+
+# Claude Code — local settings stay out, shared skills are checked in
+.claude/*
+!.claude/skills/
+
+# OS
+.DS_Store
+
+# pytest
+.pytest_cache/
+**models
+models_onnx/
+
+# hush whl
+# hush*.whl
+
+# One-off debug / exploratory / probe / smoke-test scripts
+scripts/debug_*.py
+scripts/_*.py
+scripts/bench_*.py
+scripts/probe_*.py
+scripts/smoke_test_*.py
+scripts/test_*.py
+# hush*.whl
+
+# v3/v4 retriever embedding cache (regenerable from corpus.yaml)
+
+knowledge/sentiment_agent/index/
+# Corpus .bak files at any version. Git already holds every prior
+# corpus.yaml under its real name — the v3 one on disk is byte-identical
+# to commit 34ee22d — so committing a .bak duplicates content while
+# looking like a live artefact.
+**/corpus.yaml.bak
+outputs/scanner_eval/
+
+# Pre-import snapshot written by scripts/corpus_from_qc_xlsx.py — the
+# reference it recovers ids and group names from. Redundant for version
+# control (git history is the real backup) but load-bearing for re-runs.
+knowledge/sentiment_agent/corpus.pre-qc-import.yaml
+
+# Scripts not on the deploy path — one-off analyses, batch reruns, eval and
+# optimizer tooling, dated investigations. Kept on disk because they document
+# how numbers in docs/ were produced, out of the repo because 90 files of
+# scaffolding hid the 15 that actually run.
+# Every one of them is still in git history; `git log --diff-filter=D` finds it.
+scripts/_archive/
+# Stray local trace/transcript dumps; filenames carry phone numbers.
+t/
+
+# Local working artefacts — not part of the pipeline or the handover.
+.kiro/
+docs/corpus_v4.xlsx
+docs/corpus.xlsx
+docs/sentiment_agent_flow.html
+
+# The old home of ad-hoc batches; QC rounds now live in data/qc/<round>/
+# (src/jobs/qc_eval/README.md). Transcripts are PII — never committed.
+runs/
+
+# Holds the cluster password in plaintext. scripts/check_triton.py does not —
+# it goes through the configured resource — so that one stays tracked.
+scripts/check_pg.py
+
+# This machine's stack: same shape as .env, local endpoints. `.env` itself is
+# the deployment's and is written by deployment/score_sentiment/settings.py.
+local.env
+
+# operonx job run records — .runs/<job>/<run id>/{run.json,items.jsonl}.
+.runs/
+.operonx/

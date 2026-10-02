@@ -1,0 +1,17 @@
+# TASK
+Tạo lý do ngắn gọn giải thích vì sao cuộc gọi bị đánh giá VI PHẠM tag "HỨA TRẢ".
+
+# CONTEXT
+- Loại cuộc gọi: {task_type}
+- Có đề cập số tiền không: {money_found}
+- Có đề cập thời gian trả nợ không: {time_found}
+- Có phản đối việc trả nợ không: {oppose_found} - {agreement_reason}
+
+# YÊU CẦU
+- Viết 1-2 câu tiếng Việt
+- Nêu rõ thiếu gì hoặc khách từ chối như thế nào
+- Không suy diễn thêm, chỉ dựa trên evidence có sẵn
+
+<result>
+  <reason>Lý do ngắn gọn</reason>
+</result>

@@ -1,0 +1,57 @@
+# What this project is, and which graphs are worth opening.
+#
+# `operonx-lint`, `operonx-extract` and `operonx-studio` all read this
+# file. It answers the one thing no tool can infer from source: a module
+# defines components and runnable graphs side by side, and only the author
+# knows which is which.
+#
+# `resources.yaml` is the other half and stays separate: this file is
+# what the project *is*, that one is what it *reaches out to*.
+#
+# No `[[serve]]` block. Those describe a transport that puts work into a
+# graph — websocket, http, asgi — and this is a batch job: `main.py`
+# runs the `score` job, once per call in a directory. `[[graph]]` without
+# `[[serve]]` is the documented shape for graphs nothing serves.
+
+[project]
+name = "sentiment"
+description = "Vietnamese call-centre QC scoring — seven violation and sentiment cases per call."
+src = ["."]
+# Every job and runbook; `operonx-run --list` reads it.
+app = "app.main:APP"
+
+# No `[resources] overlay`. With one, `operonx-run` bootstraps a hub from
+# resources.yaml before the app is imported — resolved against `.env` — and
+# `src.core._bootstrap` keeps a hub that is already installed. That module
+# installs it itself, after choosing `.env` or `local.env`.
+
+# ── The scoring graph ───────────────────────────────────────────────────
+# One run per call. Seven cases fan out from START in parallel and join
+# at `_finalize`.
+[[graph]]
+name  = "qc_flow"
+entry = "src.qc.graph:score_cases"
+
+# ── Subgraphs worth drawing on their own ────────────────────────────────
+# Both are reachable from `qc_flow`, but each is large enough that opening
+# it alone is the normal way to read it.
+
+# Four layers: cheap gates, scanner, filter decider, primary decider.
+[[graph]]
+name  = "sentiment_agent"
+entry = "src.cases.sentiment_agent.graph:verify_sentiment_agent"
+
+# Embed once, search both corpus sides in parallel, hydrate, assemble.
+[[graph]]
+name  = "retrieve_corpus"
+entry = "src.cases.sentiment_agent.retrieval.graph:retrieve_corpus"
+
+# ── studio ──────────────────────────────────────────────────────────────
+# Where QCLocalConsumer writes: one directory per call, holding the
+# redacted op records and the stage block. Read-only — nothing in the studio writes here.
+#
+# Matches PIPELINE_TRACER_LOCAL_DIR's default. A deployment that points
+# that variable elsewhere is pointing the studio elsewhere too, which is
+# the intended coupling: there is one trace root, not two.
+[studio]
+traces = "./traces"

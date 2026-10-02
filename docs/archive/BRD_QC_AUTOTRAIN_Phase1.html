@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>BRD — Hệ thống Autotrain AI QC (Phase 1)</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', flowchart: { htmlLabels: true } });</script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1f2328;
+    max-width: 1080px;
+    margin: 32px auto;
+    padding: 0 32px 80px;
+    line-height: 1.55;
+  }
+  h1 { font-size: 26px; margin: 0 0 4px; border-bottom: 2px solid #0969da; padding-bottom: 12px; }
+  h2 { font-size: 20px; margin: 40px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #d0d7de; }
+  h3 { font-size: 16px; margin: 24px 0 8px; color: #24292f; }
+  .meta { color: #57606a; font-size: 13px; margin-bottom: 8px; }
+  .meta span { margin-right: 16px; }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-draft { background: #fff8c5; color: #7d4e00; }
+  .badge-scope { background: #dafbe1; color: #116329; }
+  .badge-out { background: #ffebe9; color: #82071e; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 14px;
+  }
+  th, td {
+    border: 1px solid #d0d7de;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th { background: #f6f8fa; font-weight: 600; }
+  code {
+    background: #eff1f3;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Consolas, "Courier New", monospace;
+    font-size: 13px;
+  }
+  pre {
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    padding: 12px 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  pre code { background: none; padding: 0; }
+  .mermaid { text-align: center; margin: 16px 0; }
+  .callout {
+    border-left: 4px solid #0969da;
+    background: #ddf4ff;
+    padding: 10px 16px;
+    margin: 12px 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .callout-warn { border-color: #bf8700; background: #fff8c5; }
+  .callout-rec  { border-color: #1a7f37; background: #dafbe1; }
+  ul, ol { padding-left: 22px; }
+  li { margin: 4px 0; }
+  .toc { background: #f6f8fa; border: 1px solid #d0d7de; padding: 12px 20px; border-radius: 6px; font-size: 14px; }
+  .toc ol { margin: 0; padding-left: 20px; }
+  .footnote { color: #57606a; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<h1>BRD — Hệ thống Autotrain AI QC (Phase 1)</h1>
+<div class="meta">
+  <span><strong>Version:</strong> 1.0 (Draft)</span>
+  <span><strong>Ngày:</strong> 27/07/2026</span>
+  <span><strong>Author:</strong> EDA / DS Team</span>
+  <span class="badge badge-draft">DRAFT — chờ review IT + QC-BU</span>
+</div>
+<p>Tài liệu này là <strong>counter-proposal</strong> cho BRD gốc của QC-BU về tính năng Note Issue trên VQC UI. Tập trung mô tả luồng dữ liệu <em>autotrain</em> giữa 3 bên (QC-BU / IT / EDA), <strong>không</strong> lặp lại kiến trúc scoring pipeline nội bộ.</p>
+
+<div class="toc">
+  <strong>Mục lục</strong>
+  <ol>
+    <li>Mục tiêu &amp; phạm vi Phase 1</li>
+    <li>Các bên tham gia + trách nhiệm</li>
+    <li>Luồng dữ liệu tổng thể</li>
+    <li>Data model — Feedback Issue</li>
+    <li>Kiến trúc lưu trữ Corpus (2 option + đề xuất)</li>
+    <li>API contract IT ↔ EDA</li>
+    <li>Đối soát sau Fix</li>
+    <li>Milestone Phase 1</li>
+    <li>Open questions</li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2>1. Mục tiêu &amp; phạm vi Phase 1</h2>
+
+<h3>Executive Summary</h3>
+<table>
+  <tr><th>Nội dung</th><th>Chi tiết</th></tr>
+  <tr><td>Mục tiêu</td><td>QC ghi nhận trường hợp AI đánh giá sai → dữ liệu tự động đưa vào training pool AI → AI tự cải thiện qua thời gian.</td></tr>
+  <tr><td>Đầu vào</td><td>Feedback issue do QC tạo trên VQC UI (theo Turn hoặc theo Tiêu chí).</td></tr>
+  <tr><td>Đầu ra</td><td>Corpus AI được cập nhật; các cuộc gọi đã note được rescore bằng phiên bản mới; QC-BU thấy được hiệu quả xử lý.</td></tr>
+  <tr><td>Scope Phase 1</td><td><span class="badge badge-scope">Auto append feedback vào training pool</span></td></tr>
+  <tr><td>Scope Phase 2</td><td><span class="badge badge-out">Cho BU tự custom prompt + corpus (không nằm trong tài liệu này)</span></td></tr>
+</table>
+
+<h3>In scope — Phase 1</h3>
+<ul>
+  <li>QC note issue ở 2 điểm: Transcript (theo Turn) và Kết quả AI (theo Tiêu chí).</li>
+  <li>IT truyền feedback issue sang EDA cùng với danh sách call.</li>
+  <li>EDA đọc feedback → tự động append vào training pool.</li>
+  <li>Rerun cuộc gọi đã note sau khi EDA update → đối soát trước/sau fix.</li>
+  <li>Realtime dashboard theo dõi trạng thái xử lý issue.</li>
+</ul>
+
+<h3>Out of scope — Phase 1</h3>
+<ul>
+  <li>BU custom prompt / corpus qua UI (Phase 2).</li>
+  <li>Review gate / approval workflow (Phase 2).</li>
+  <li>Rollback UI cho corpus (Phase 2).</li>
+  <li>Xử lý lỗi <em>data quality</em> (Sai ASR, tạp âm, sai người nói) — <strong>không</strong> đi vào training pool, cần route sang team ASR / pre-processing riêng.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>2. Các bên tham gia + trách nhiệm</h2>
+
+<table>
+  <tr><th>Bên</th><th>Trách nhiệm</th><th>Ownership</th></tr>
+  <tr>
+    <td>QC-BU (End user)</td>
+    <td>Nghe call, đánh giá kết quả AI, note issue trên VQC UI khi AI sai.</td>
+    <td>Nội dung feedback</td>
+  </tr>
+  <tr>
+    <td>IT (Win IT)</td>
+    <td>
+      <ul>
+        <li>Build VQC UI + Side Panel Note Issue.</li>
+        <li>Lưu feedback issue vào DB nội bộ.</li>
+        <li>Cung cấp API/data zone cho EDA đọc issue kèm call list.</li>
+        <li>Trigger rerun khi EDA báo update xong.</li>
+      </ul>
+    </td>
+    <td>UI + DB feedback + API delivery</td>
+  </tr>
+  <tr>
+    <td>EDA / DS Team</td>
+    <td>
+      <ul>
+        <li>Consume feedback issue từ IT.</li>
+        <li>Chuyển đổi feedback thành training data.</li>
+        <li>Cập nhật training pool (corpus.yaml).</li>
+        <li>Rerun call đã note bằng phiên bản AI mới, trả kết quả về IT.</li>
+      </ul>
+    </td>
+    <td>Model + Training pool</td>
+  </tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>3. Luồng dữ liệu tổng thể</h2>
+
+<h3>3.1. Sequence diagram — end-to-end</h3>
+<div class="mermaid">
+sequenceDiagram
+  autonumber
+  participant QC as QC-BU
+  participant UI as VQC UI (IT)
+  participant DB as IT DB (feedback_issue)
+  participant API as IT API / Data Zone
+  participant EDA as EDA Pipeline
+  participant Corpus as Training Pool
+  participant AI as AI Scoring (analyze)
+
+  Note over QC,UI: Bước 1 — QC note issue
+  QC->>UI: Click turn → mở Side Panel<br/>Nhập QC label + comment
+  UI->>DB: INSERT feedback_issue (status=new)
+  DB-->>UI: OK
+  UI-->>QC: Đã ghi nhận
+
+  Note over EDA,API: Bước 2 — EDA pull dữ liệu (định kỳ)
+  EDA->>API: GET calls + feedback_issues (from=T-1)
+  API->>DB: SELECT WHERE status IN (new, retrain_ready)
+  DB-->>API: rows
+  API-->>EDA: JSON payload (call_metadata + issues[])
+
+  Note over EDA,Corpus: Bước 3 — EDA update training pool
+  EDA->>EDA: Filter valid issues<br/>(loại data-quality issues)
+  EDA->>Corpus: Append entries<br/>(positives / carveouts)
+  EDA->>API: PATCH issues → status=in_training
+
+  Note over EDA,AI: Bước 4 — Rerun đối soát
+  EDA->>AI: Rescore calls đã note<br/>(bằng phiên bản mới)
+  AI-->>EDA: New verdict
+  EDA->>API: POST rerun_result<br/>(issue_id, before, after)
+  API->>DB: UPDATE feedback_issue<br/>set status=done + rerun_verdict
+  DB-->>UI: (realtime) trạng thái Đã xử lý
+  UI-->>QC: Thấy kết quả đối soát trên dashboard
+</div>
+
+<h3>3.2. Component overview</h3>
+<div class="mermaid">
+flowchart LR
+  subgraph IT_side["IT domain"]
+    UI[VQC UI<br/>Side Panel Note Issue]
+    ITDB[(feedback_issue<br/>DB)]
+    ITAPI[API / Data Zone<br/>calls + issues]
+  end
+
+  subgraph EDA_side["EDA domain"]
+    Puller[Feedback Puller<br/>định kỳ]
+    Ingest[Ingest job<br/>filter + normalize]
+    Pool[(Training Pool<br/>corpus.yaml)]
+    Rescore[Rescore job]
+  end
+
+  QC([QC-BU]) --> UI
+  UI --> ITDB
+  ITDB --> ITAPI
+  ITAPI -->|pull| Puller
+  Puller --> Ingest
+  Ingest --> Pool
+  Pool -.->|next run| Rescore
+  Rescore -->|kết quả đối soát| ITAPI
+  ITAPI --> ITDB
+  ITDB -.->|realtime| UI
+
+  classDef it fill:#dbeafe,stroke:#1e40af
+  classDef eda fill:#dcfce7,stroke:#166534
+  class UI,ITDB,ITAPI it
+  class Puller,Ingest,Pool,Rescore eda
+</div>
+
+<!-- ============================================================ -->
+<h2>4. Data model — Feedback Issue</h2>
+
+<h3>4.1. Field bắt buộc trên UI (Side Panel)</h3>
+<table>
+  <tr><th>Field</th><th>Type</th><th>Nguồn</th><th>Bắt buộc</th></tr>
+  <tr><td><code>calltrace_id</code></td><td>string</td><td>Auto từ call đang review</td><td>✓</td></tr>
+  <tr><td><code>issue_source</code></td><td>enum</td><td>Auto — <code>turn</code> hoặc <code>criterion</code></td><td>✓</td></tr>
+  <tr><td><code>turn_idx</code></td><td>int</td><td>Auto (nếu <code>issue_source=turn</code>)</td><td>Cond.</td></tr>
+  <tr><td><code>turn_timestamp</code></td><td>string (mm:ss)</td><td>Auto (nếu <code>issue_source=turn</code>)</td><td>Cond.</td></tr>
+  <tr><td><code>turn_text</code></td><td>string</td><td>Auto-fill, cho QC edit lại</td><td>✓</td></tr>
+  <tr><td><code>criterion</code></td><td>enum</td><td>Dropdown 7 tiêu chí (default: Thái độ ĐTV)</td><td>✓</td></tr>
+  <tr><td><code>qc_label</code></td><td>enum</td><td>Dropdown 3 giá trị (xem §4.2)</td><td>✓</td></tr>
+  <tr><td><code>qc_comment</code></td><td>string</td><td>QC nhập freetext, giải thích tại sao</td><td>✓</td></tr>
+  <tr><td><code>reviewer</code></td><td>string</td><td>Auto — username QC đang login</td><td>✓</td></tr>
+  <tr><td><code>created_at</code></td><td>timestamp</td><td>Auto</td><td>✓</td></tr>
+  <tr><td><code>status</code></td><td>enum</td><td>Auto — mặc định <code>new</code></td><td>✓</td></tr>
+</table>
+
+<h3>4.2. QC label — 3 giá trị</h3>
+<p>Quyết định feedback đi đường nào ở phía EDA:</p>
+<table>
+  <tr><th>QC label (UI hiển thị)</th><th>Ý nghĩa</th><th>Backend action</th></tr>
+  <tr>
+    <td><strong>Vi phạm</strong> — AI bỏ sót</td>
+    <td>Turn/tiêu chí này thực sự vi phạm nhưng AI không bắt.</td>
+    <td>Thêm vào training pool dạng <em>positive sample</em>.</td>
+  </tr>
+  <tr>
+    <td><strong>Tích cực</strong> — AI gán nhầm</td>
+    <td>Turn/tiêu chí này bình thường nhưng AI báo vi phạm.</td>
+    <td>Thêm vào training pool dạng <em>carveout sample</em>.</td>
+  </tr>
+  <tr>
+    <td><strong>Không liên quan</strong> (Sai ASR / tạp âm / sai người nói)</td>
+    <td>Lỗi hạ tầng, không phải lỗi của model.</td>
+    <td>Log vào queue riêng, <strong>không</strong> vào training pool. Route sang team ASR/pre-processing.</td>
+  </tr>
+</table>
+
+<h3>4.3. Status lifecycle</h3>
+<div class="mermaid">
+stateDiagram-v2
+  [*] --> new: QC create
+  new --> pulled: EDA đã lấy
+  pulled --> in_training: EDA append pool xong
+  pulled --> rejected: Lỗi data quality<br/>(không train được)
+  in_training --> rerun_pending: chờ rescore
+  rerun_pending --> done: rescore xong
+  done --> [*]
+  rejected --> [*]
+</div>
+
+<!-- ============================================================ -->
+<h2>5. Kiến trúc lưu trữ Corpus — 2 option + đề xuất</h2>
+
+<p>Đây là điểm cần chốt rõ giữa IT + EDA. Có 3 option:</p>
+
+<table>
+  <tr>
+    <th>Tiêu chí</th>
+    <th>Option A — Corpus lưu DB dùng chung</th>
+    <th>Option B — EDA quét data zone định kỳ</th>
+    <th>Option C — Hybrid (<strong>đề xuất</strong>)</th>
+  </tr>
+  <tr>
+    <td>Feedback issue lưu ở</td>
+    <td>DB dùng chung (IT + EDA cùng schema)</td>
+    <td>File JSON trong data zone (IT push cùng call list)</td>
+    <td>DB IT (transactional)</td>
+  </tr>
+  <tr>
+    <td>Training pool (corpus) lưu ở</td>
+    <td>Cùng DB dùng chung</td>
+    <td>Git repo EDA (file <code>corpus.yaml</code>)</td>
+    <td>Git repo EDA (file <code>corpus.yaml</code>)</td>
+  </tr>
+  <tr>
+    <td>Cách EDA lấy feedback</td>
+    <td>SQL trực tiếp</td>
+    <td>Scan folder / bucket định kỳ</td>
+    <td>Gọi API IT (REST)</td>
+  </tr>
+  <tr>
+    <td>Version control training pool</td>
+    <td>Cần migration + version table</td>
+    <td>Git — sẵn có audit trail</td>
+    <td>Git — sẵn có audit trail</td>
+  </tr>
+  <tr>
+    <td>Realtime dashboard cho QC</td>
+    <td>Dễ — query trực tiếp DB</td>
+    <td>Khó — file-based, phải sync ngược</td>
+    <td>Dễ — query DB IT</td>
+  </tr>
+  <tr>
+    <td>Complexity infra</td>
+    <td>Cao — DB shared cần permission phức tạp, IT + EDA cùng write</td>
+    <td>Trung bình — cần polling + retry</td>
+    <td>Thấp — interface REST rõ ràng</td>
+  </tr>
+  <tr>
+    <td>Rủi ro corpus bị corrupt</td>
+    <td>Cao — nhiều bên write cùng lúc</td>
+    <td>Thấp — EDA duy nhất write</td>
+    <td>Thấp — EDA duy nhất write</td>
+  </tr>
+  <tr>
+    <td>Rollout time</td>
+    <td>Lâu (schema alignment)</td>
+    <td>Nhanh</td>
+    <td>Nhanh</td>
+  </tr>
+</table>
+
+<div class="callout callout-rec">
+  <strong>Đề xuất: Option C (Hybrid)</strong>
+  <ul>
+    <li><strong>IT</strong> giữ quyền sở hữu bảng <code>feedback_issue</code> trong DB nội bộ — hỗ trợ tốt realtime UI + dashboard cho QC.</li>
+    <li><strong>EDA</strong> giữ quyền sở hữu training pool (<code>corpus.yaml</code> trong git) — audit trail bằng git history, rollback dễ.</li>
+    <li>Interface giữa 2 bên là <strong>REST API</strong> (xem §6) — decoupled, không phụ thuộc schema DB của nhau.</li>
+    <li>Không cần DB dùng chung → tránh vấn đề permission + concurrent write.</li>
+  </ul>
+</div>
+
+<div class="callout callout-warn">
+  <strong>Lưu ý về Option B:</strong> Nếu chọn Option B (data zone push kèm call list), IT vẫn cần thêm cơ chế notification khi có issue mới để EDA không lag quá. File-based delivery kém realtime, khó cho tính năng realtime dashboard trong BRD gốc.
+</div>
+
+<!-- ============================================================ -->
+<h2>6. API contract IT ↔ EDA</h2>
+
+<p>Nếu chọn Option C — đề xuất 3 endpoint tối thiểu:</p>
+
+<h3>6.1. <code>GET /qc/feedback-issues</code> — EDA pull issue</h3>
+<table>
+  <tr><th>Param</th><th>Ý nghĩa</th></tr>
+  <tr><td><code>since</code></td><td>ISO timestamp — chỉ lấy issue tạo/update sau thời điểm này</td></tr>
+  <tr><td><code>status</code></td><td>Filter (mặc định <code>new,pulled</code>)</td></tr>
+  <tr><td><code>limit</code></td><td>Số record tối đa</td></tr>
+</table>
+<p>Response — array các <code>feedback_issue</code> (schema §4.1) + <strong>metadata call kèm theo</strong> (tối thiểu: <code>calltrace_id</code>, <code>call_code</code>, <code>agent_username</code>, <code>call_date</code>, <code>queueid</code>, <code>is_chinh_chu</code>, <code>closed_by</code> — cùng bộ field trong <code>metadata.py</code> hiện tại).</p>
+
+<h3>6.2. <code>PATCH /qc/feedback-issues/{id}</code> — EDA update status</h3>
+<p>Body:</p>
+<pre><code>{
+  "status": "in_training | rejected | done",
+  "reject_reason": "...",           // optional
+  "corpus_ref": "step42_20260727",  // optional — section trong corpus.yaml
+  "rerun_verdict": {                 // chỉ set khi status=done
+    "before": { "violation": true,  "category": "C1", "reason": "..." },
+    "after":  { "violation": false, "category": null, "reason": "..." }
+  }
+}</code></pre>
+
+<h3>6.3. <code>POST /qc/rescore-request</code> — EDA báo IT chạy lại</h3>
+<p>Body:</p>
+<pre><code>{
+  "calltrace_ids": ["...", "..."],
+  "training_pool_version": "v4-corpus-20260727",
+  "requested_by": "eda-team"
+}</code></pre>
+<p>IT trigger rescore trên các call này (dùng phiên bản model mới nhất), sau đó cập nhật kết quả bằng endpoint §6.2.</p>
+
+<!-- ============================================================ -->
+<h2>7. Đối soát sau Fix</h2>
+
+<h3>7.1. Yêu cầu</h3>
+<ul>
+  <li>Với mỗi issue đã đi vào training pool, hệ thống phải rerun cuộc gọi đó bằng phiên bản AI mới.</li>
+  <li>UI hiển thị 3 kết quả song song:
+    <ol>
+      <li><strong>Kết quả AI trước fix</strong> — verdict cũ (đã lưu khi call được scan lần đầu).</li>
+      <li><strong>Kết quả AI sau fix</strong> — verdict mới sau rerun.</li>
+      <li><strong>Kỳ vọng của QC</strong> — chính là <code>qc_label</code> QC đã note.</li>
+    </ol>
+  </li>
+  <li>Trạng thái Issue → <code>done</code> chỉ khi sau-fix trùng với kỳ vọng QC.</li>
+</ul>
+
+<h3>7.2. UI Dashboard — field bổ sung</h3>
+<table>
+  <tr><th>Field</th><th>Mô tả</th></tr>
+  <tr><td>Kết quả AI trước</td><td>Verdict + reason lúc call được scan lần đầu.</td></tr>
+  <tr><td>Kết quả AI sau</td><td>Verdict + reason sau rerun.</td></tr>
+  <tr><td>Kỳ vọng QC</td><td>QC label đã note.</td></tr>
+  <tr><td>Match với kỳ vọng?</td><td>✓ / ✗ (auto compute).</td></tr>
+  <tr><td>Phiên bản training pool</td><td>VD <code>v4-corpus-20260727</code> — audit trail.</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>8. Milestone Phase 1</h2>
+
+<table>
+  <tr><th>Mốc</th><th>Deliverable</th><th>Chủ trì</th><th>Tuần</th></tr>
+  <tr><td>M1</td><td>Chốt kiến trúc lưu trữ (A/B/C) + API contract</td><td>IT + EDA</td><td>W1</td></tr>
+  <tr><td>M2</td><td>IT: schema DB <code>feedback_issue</code> + Side Panel UI</td><td>IT</td><td>W2–W3</td></tr>
+  <tr><td>M3</td><td>IT: 3 endpoint (§6.1–§6.3) sẵn sàng ở môi trường DEV</td><td>IT</td><td>W3</td></tr>
+  <tr><td>M4</td><td>EDA: Feedback Puller + Ingest job (append vào training pool)</td><td>EDA</td><td>W3–W4</td></tr>
+  <tr><td>M5</td><td>EDA: Rescore job + báo kết quả về IT</td><td>EDA</td><td>W4</td></tr>
+  <tr><td>M6</td><td>End-to-end demo trên môi trường UAT với 20 issue mẫu</td><td>IT + EDA + QC-BU</td><td>W5</td></tr>
+  <tr><td>M7</td><td>Go-live Phase 1 — QC dùng thật</td><td>Cả 3 bên</td><td>W6</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>9. Open questions — cần chốt với các bên</h2>
+
+<ol>
+  <li><strong>Chọn Option A, B hay C?</strong> — đề xuất C, cần IT xác nhận có build được API layer không.</li>
+  <li><strong>Tần suất pull</strong> của EDA — realtime (webhook) hay batch (nightly / hourly)?</li>
+  <li><strong>QC có được sửa lại issue đã note không?</strong> — nếu có, cần versioning trên feedback_issue.</li>
+  <li><strong>Ai chịu trách nhiệm route lỗi data-quality (Sai ASR, tạp âm)?</strong> — cần team owner rõ ràng, không thì lỗi loại này sẽ tồn đọng.</li>
+  <li><strong>SLA rescore</strong> — sau bao lâu kể từ khi QC note thì phải có kết quả đối soát? (Đề xuất: 24h.)</li>
+  <li><strong>Rollback policy</strong> — nếu 1 batch training pool làm AI tệ hơn, cơ chế revert như thế nào? (Có thể defer sang Phase 2.)</li>
+</ol>
+
+<hr>
+<p class="footnote">Document owner: EDA / DS Team. Version 1.0. Feedback → thanglq12.</p>
+
+</body>
+</html>

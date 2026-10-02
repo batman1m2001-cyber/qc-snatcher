@@ -1,0 +1,123 @@
+Xác định: **AGENT có tiết lộ thông tin nhạy cảm về khoản vay không?**
+
+**QUAN TRỌNG**: Chỉ xét lời nói của AGENT, KHÔNG xét lời nói của CUSTOMER.
+- Nếu CUSTOMER nói về số tiền/thông tin khoản vay → KHÔNG tính là tiết lộ
+- Chỉ khi AGENT chủ động nói ra thông tin mới tính là tiết lộ
+
+**Định nghĩa "thông tin nhạy cảm về khoản vay"**: là các thuộc tính VỐN CÓ của hồ sơ vay (đặc tính tự nhiên, ghi trong hợp đồng/hệ thống), KHÔNG bao gồm các deadline mà CB tự đặt ra hay lịch hẹn KH đã hứa.
+
+---
+
+**Tiết lộ (true)** khi AGENT nói RÕ con số CỤ THỂ về thuộc tính khoản vay:
+
+1. **Số tiền nợ cụ thể** (có chữ số):
+   - "10 triệu", "500 nghìn", "6.990.000đ", "mười lăm triệu"
+   - "ba triệu bốn trăm bảy mươi", "một trăm mười bốn triệu"
+
+2. **Số ngày quá hạn CỤ THỂ** (có chữ số đếm):
+   - "quá hạn 9 ngày", "105 ngày", "chậm hạn mười bảy ngày"
+   - "quá hạn sáu mươi tám ngày", "quá hạn bốn mốt ngày"
+   - "quá hạn hai năm" (hai năm là số đếm cụ thể)
+
+3. **Ngày đến hạn TỰ NHIÊN của khoản vay** (đặc tính hợp đồng, không phải deadline CB đặt):
+   - "khoản vay đến hạn ngày 20", "ngày đáo hạn là 20/4"
+   - "ngày X là ngày đến hạn của khoản vay"
+   - "khoản lãi đến hạn vào ngày X"
+   - Bắt buộc câu phải có từ khóa thuộc tính tự nhiên: "đến hạn" / "đáo hạn" / "kỳ hạn" / "ngày đến hạn của khoản vay". Nếu không có thì KHÔNG rơi vào rule này.
+
+4. **Số ngày nữa đến hạn TỰ NHIÊN** (bắt buộc câu có "đến hạn" / "đáo hạn" / "kỳ hạn"):
+   - "3 ngày nữa đến hạn", "còn 5 ngày nữa khoản vay đến hạn", "còn 2 ngày nữa là đáo hạn"
+   - KHÔNG tính rule này nếu câu có keyword deadline-yêu-cầu ("chậm nhất", "trước ngày", "trước thời điểm") — xem rule (5) bên dưới và "Quy tắc keyword ưu tiên".
+
+5. **Tình trạng nợ nhóm CỤ THỂ** (CIC classification):
+   - "nợ nhóm một", "nợ nhóm hai", "nợ nhóm ba", "nợ nhóm bốn", "nợ nhóm năm"
+   - "lên nợ xấu nhóm bốn", "đang ở nhóm nợ năm"
+   - Đây là thuộc tính phân loại nợ trong hệ thống ngân hàng — **TIẾT LỘ**
+
+6. **Khoản vay đã chuyển nợ xấu / đã bị xếp nhóm nợ xấu** (không cần số nhóm cụ thể):
+   - "hồ sơ đã để chuyển nợ xấu rồi", "khoản vay đã chuyển nợ xấu", "đã bị chuyển nợ xấu"
+   - "hồ sơ vay khách hàng đã chuyển nợ xấu", "lên nợ xấu rồi"
+   - "thẻ này đã chuyển nhóm nợ xấu", "khoản vay đã rơi vào nợ xấu"
+   - Đây là tình trạng phân loại quan trọng (per QC issue list "Khoản vay đã chuyển nợ xấu" là thông tin nhạy cảm) — **TIẾT LỘ** ngay cả khi không nói rõ nhóm 1/2/3/4/5.
+
+---
+
+**KHÔNG tiết lộ (false)**:
+
+1. **CUSTOMER nói** về số tiền/thông tin khoản vay → không phải Agent tiết lộ.
+
+2. **Ngày ngân hàng liên hệ/gọi điện** (không liên quan thuộc tính khoản vay):
+   - "ngày 18 ngân hàng liên hệ", "hôm qua em gọi", "ngày 21 có gọi"
+
+3. **Tên sản phẩm vay, thời gian vay, ngày mở khoản**:
+   - "khoản vay tín chấp", "thẻ tín dụng", "khoản thấu chi", "vay 3 năm"
+   - "mở khoản từ ngày X" (chỉ là thời gian mở, không phải đến hạn)
+
+4. **Nói chung chung KHÔNG có con số**:
+   - "có khoản vay", "đang quá hạn", "cần thanh toán", "sắp đến hạn", "đến kỳ thanh toán"
+   - **"quá hạn nhiều ngày", "quá hạn cao ngày", "quá hạn lâu ngày", "quá hạn nhiều"**, "chậm trả lâu rồi" — dù có chữ "ngày" nhưng KHÔNG có số đếm cụ thể → KHÔNG vi phạm
+   - "đang gặp khó khăn", "chậm trả", "có nợ xấu" (không nói nhóm cụ thể) — chung chung, không cụ thể → KHÔNG vi phạm
+
+5. **Deadline yêu cầu thanh toán DO CB/NGÂN HÀNG ĐẶT RA** (không phải ngày đến hạn tự nhiên):
+   - "yêu cầu thanh toán **chậm nhất** ngày X", "**chậm nhất là đến ngày** X"
+   - "thanh toán **trước ngày** X", "**trước thời điểm ngày** X"
+   - "xử lý dư nợ **trước ngày** X", "giải quyết toàn bộ dư nợ chậm nhất ngày X"
+   - "thanh toán **chậm nhất đến ngày mai**", "anh đang chậm nhất đến ngày mai"
+   - "thanh toán **chậm nhất ngày 24/5/2026**", "khoản vay cần thanh toán **chậm nhất ngày** DD/MM/YYYY"
+   - "thanh toán **chậm nhất 2 ngày nữa**", "**chậm nhất N ngày nữa** anh phải xử lý"
+   - "**trong vòng** X ngày nữa anh phải xử lý / phải thanh toán"
+   - Đây là deadline CB tự đặt để KH xử lý, KHÔNG tiết lộ thuộc tính tự nhiên của khoản vay
+
+---
+
+**🔑 Quy tắc keyword ưu tiên** (áp dụng TRƯỚC rule 3/4):
+
+Nếu câu nói chứa BẤT KỲ keyword deadline-yêu-cầu nào sau đây:
+- "chậm nhất", "muộn nhất"
+- "trước ngày", "trước thời điểm", "trước hôm"
+- "phải thanh toán trước", "phải xử lý trước", "phải trả trước"
+- "trong vòng ... (nữa)"
+
+→ Mặc định rơi vào rule (5) = **KHÔNG tiết lộ**, kể cả khi câu có chứa "X ngày", "ngày DD/MM" hay "X ngày nữa". Lý do: các keyword này thể hiện ý CB đang **yêu cầu** KH xử lý trong khung thời gian, KHÔNG mô tả thuộc tính tự nhiên của khoản vay.
+
+Ngoại lệ: chỉ rơi vào rule (3)/(4) nếu câu có thêm cụm "đến hạn"/"đáo hạn"/"kỳ hạn" đi kèm con số và ý chính là **mô tả thuộc tính khoản vay** (ví dụ: "ngày 20 là ngày đến hạn của khoản vay, anh thanh toán chậm nhất ngày 20").
+
+6. **CB nhắc lại lời hứa/lịch hẹn của KH**:
+   - "hẹn với em là thanh toán ngày hôm qua"
+   - "hôm trước anh hứa thanh toán ngày X", "anh đã hẹn thanh toán hôm nay"
+   - Đây chỉ là nhắc lại lời hứa của KH, không phải tiết lộ thuộc tính khoản vay
+
+---
+
+**Lưu ý phân biệt rất quan trọng giữa rule (3)/(4) và rule (5):**
+
+- ✅ Vi phạm: "Khoản vay của anh **đến hạn vào ngày 20**" → đây là thuộc tính tự nhiên của khoản vay
+- ✅ Vi phạm: "Còn **3 ngày nữa đến hạn**", "Khoản vay còn **2 ngày nữa là đáo hạn**" → thuộc tính kỳ hạn của khoản vay
+- ❌ Không vi phạm: "Anh **thanh toán chậm nhất là ngày 20**" → đây là deadline CB đặt
+- ❌ Không vi phạm: "Anh **xử lý dư nợ trước ngày 20**" → deadline CB đặt
+- ❌ Không vi phạm: "Khoản vay cần thanh toán **chậm nhất ngày 24/5/2026**" → deadline CB đặt
+- ❌ Không vi phạm: "Anh **thanh toán chậm nhất 2 ngày nữa**", "**chậm nhất 3 ngày nữa** phải xử lý" → deadline CB đặt (KHÔNG nhầm với "3 ngày nữa đến hạn")
+- ❌ Không vi phạm: "Anh phải xử lý **trong vòng 5 ngày nữa**" → deadline CB đặt
+- ✅ Vi phạm: "**Ngày 20 là ngày đến hạn rồi**, anh thanh toán đi" → vẫn là thuộc tính tự nhiên (CB nói ngày 20 là ngày đến hạn của khoản vay)
+
+**Cặp đối chiếu dễ nhầm nhất** (giữa rule 4 và rule 5):
+- ✅ "Còn **3 ngày nữa đến hạn**" → vi phạm (rule 4 — có "đến hạn")
+- ❌ "Anh thanh toán **chậm nhất 3 ngày nữa**" → không vi phạm (rule 5 — có "chậm nhất", KHÔNG có "đến hạn")
+
+Nếu câu nói có cả "đến hạn" và một deadline yêu cầu, hãy nhìn vào ý chính: CB đang **mô tả thuộc tính** khoản vay (vi phạm) hay đang **yêu cầu KH thanh toán** trong khung thời gian (không vi phạm)?
+
+---
+
+Transcript được cho dưới dạng `[N] AGENT: ...` hoặc `[x] CUSTOMER: ...`, trong đó `N` là turn_idx của lượt AGENT. Lượt CUSTOMER bị mask `[x]` — KHÔNG được trích idx CUSTOMER.
+
+Trả về XML:
+<disclosed>true/false</disclosed>
+<reason>Lý do ngắn gọn kèm trích dẫn nguyên văn (nếu có)</reason>
+<evidence>
+  Danh sách turn_idx AGENT tiết lộ thông tin nhạy cảm, format: 3, 7, 12
+  (Chỉ điền số nguyên có xuất hiện trong `[N] AGENT:`. KHÔNG bịa idx.)
+  Nếu disclosed=false, để trống.
+</evidence>
+
+Nội dung cuộc gọi:
+{transcript}
