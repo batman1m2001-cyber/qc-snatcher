@@ -5,7 +5,7 @@ description: Rebuild and interpret the selfcheck baseline in tests/sample/fixtur
 
 # Selfcheck baseline
 
-`selfcheck` is a runbook — preflight ▶ ingest (seeding a stale store) ▶
+`selfcheck` is a job of steps — preflight ▶ ingest (seeding a stale store) ▶
 `selfcheck_score`, an operonx `Eval`: the 90 fixture calls through the
 scoring graph, each compared with its recorded baseline row in
 `tests/sample/fixtures/`. In the deploy pipeline it runs as
@@ -75,7 +75,7 @@ is the `qc_eval` job, on a QC batch (`src/jobs/qc_eval/README.md`).
 | a field goes `X != None` on a subset | you added or removed a trace field |
 | match rate collapses toward 0 | config drift, not model drift — wrong resource key, empty corpus. Read the preflight and ingest lines above the scoring |
 
-The runbook's first two steps name a wrong or unreachable resource
+The job's first two steps name a wrong or unreachable resource
 (preflight) and seed a corpus store that does not hold this corpus
 (ingest) — so a hand-run `operonx-run selfcheck` seeds the store it points
 at, as the deploy gate does.

@@ -24,7 +24,7 @@ seed_store   ok → nothing. empty / mismatch → seed when `seed`, else fail.
              knowledge_info rows are never deleted
 verify       after a write, the rows were embedded by the embedder configured now
 
-Runs as the `main` runbook's second step (seed=false unless --ingest) and
+Runs as the `main` job (steps)'s second step (seed=false unless --ingest) and
 in `selfcheck`, the deploy gate (seed=true). Writes to the store the pipeline reads
 (`retrieval.positives` in models.yaml, DSN from PG_DSN).
 

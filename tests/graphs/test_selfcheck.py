@@ -192,8 +192,8 @@ def test_the_gate_seeds_before_it_scores():
     store, the fixture would judge the old corpus."""
     from app.main import ingest, selfcheck
 
-    assert [j.name for j in selfcheck.jobs] == ["preflight", "ingest", "selfcheck_score"]
-    assert selfcheck.jobs[1].inputs["seed"] is True
+    assert [j.name for j in selfcheck.steps] == ["preflight", "ingest", "selfcheck_score"]
+    assert selfcheck.steps[1].inputs["seed"] is True
     assert ingest.inputs["seed"] is False  # a pod never seeds unless --ingest
 
 
@@ -201,11 +201,12 @@ def test_the_gate_stops_at_the_first_failed_step(monkeypatch, tmp_path):
     from app.main import selfcheck as deploy
 
     ran = []
-    for job in deploy.jobs:
-        async def run(resume=False, job=job):
+    for job in deploy.steps:
+        async def run(resume=False, job=job, **_):
             ran.append(job.name)
             return SimpleNamespace(status="failed" if job.name == "preflight" else "ok",
-                                   run_id="x", path=tmp_path, counts={}, meta={})
+                                   run_id="x", path=tmp_path, counts={}, meta={},
+                                   summary=lambda: job.name)
         monkeypatch.setattr(job, "run", run)
     monkeypatch.setattr(deploy, "record_dir", tmp_path)
     assert deploy.run_sync().status != "ok" and ran == ["preflight"]
@@ -288,19 +289,19 @@ def test_each_line_says_how_far_the_run_is(capsys):
 
 
 def _gate_record(tmp_path, monkeypatch, steps, ev=None):
-    """A `selfcheck` runbook record: *steps* are (name, status, scored?)."""
-    from operonx.app.jobs import runbook
+    """A `selfcheck` record (a job of steps): *steps* are (name, status, scored?)."""
+    import operonx.app.jobs as jobs
 
-    children = []
+    meta = []
     for name, status, scored in steps:
-        child = {"name": name, "status": status}
+        step = {"name": name, "status": status}
         if scored:
             (tmp_path / name).mkdir()
             (tmp_path / name / "run.json").write_text(json.dumps({"eval": ev}), encoding="utf-8")
-            child["path"] = str(tmp_path / name)
-        children.append(child)
-    (tmp_path / "run.json").write_text(json.dumps({"tree": {"children": children}}), encoding="utf-8")
-    monkeypatch.setattr(runbook, "last_run", lambda root, name: SimpleNamespace(path=tmp_path))
+            step["path"] = str(tmp_path / name)
+        meta.append(step)
+    monkeypatch.setattr(jobs, "last_run",
+                        lambda root, name: SimpleNamespace(path=tmp_path, meta={"steps": meta}))
 
 
 EV = {"cases": 90, "passed": 79, "errored": 0, "pass_rate": 0.8778, "threshold": 0.85}
@@ -308,7 +309,7 @@ EV = {"cases": 90, "passed": 79, "errored": 0, "pass_rate": 0.8778, "threshold":
 
 @pytest.mark.parametrize("status, word", [("ok", "PASS"), ("failed", "FAIL")])
 def test_the_gate_says_its_match_rate(tmp_path, monkeypatch, status, word):
-    """The runbook's own last line counts steps, not calls — a 79/90 run
+    """The steps job's own last line counts steps, not calls — a 79/90 run
     once ended on `jobs ok=3` with no rate anywhere on screen."""
     from src.jobs.selfcheck._gate import verdict
 

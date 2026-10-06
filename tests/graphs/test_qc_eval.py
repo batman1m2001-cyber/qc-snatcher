@@ -128,7 +128,7 @@ def test_a_second_run_is_diffed_against_the_first(batch):
     assert diff.startswith("fixed 0") and "broke 0" in diff
 
 
-def test_set_batch_on_the_runbook_reaches_the_dataset():
+def test_set_batch_on_the_steps_reaches_the_dataset():
     """`operonx-run qc_eval --set batch=<folder>` sets every job's inputs
     before the run; the dataset reads the eval's own dict, so it sees it."""
     from argparse import Namespace
@@ -137,11 +137,11 @@ def test_set_batch_on_the_runbook_reaches_the_dataset():
 
     from app import main
 
-    jobs = main.qc_eval.jobs
+    jobs = main.qc_eval.steps
     before = [dict(j.inputs) for j in jobs]
     try:
-        _apply(main.qc_eval, Namespace(sets=["batch=data/qc/round_x"], record_dir=None, source=None,
-                                       sink=None, concurrency=None))
+        _apply(main.qc_eval, Namespace(sets=["batch=data/qc/round_x"], record_dir=None, items=None,
+                                       concurrency=None))
         assert main.QC_BATCH.inputs["batch"] == "data/qc/round_x"
         assert main.qc_eval_report.inputs["batch"] == "data/qc/round_x"
     finally:

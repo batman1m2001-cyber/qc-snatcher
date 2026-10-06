@@ -28,7 +28,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "operonx", extras = ["openai", "pgvector", "triton"], specifier = ">=1.11.0" },
+    { name = "operonx", extras = ["openai", "pgvector", "triton"], specifier = ">=1.17.1" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
 ]
 
@@ -491,7 +491,7 @@ wheels = [
 
 [[package]]
 name = "operonx"
-version = "1.11.0"
+version = "1.17.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "orjson" },
@@ -499,9 +499,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/79/e30b1312e0c07faa76612801349ec01c47b642628f3e91f29b59671fc843/operonx-1.11.0.tar.gz", hash = "sha256:4ac59adb3cf5d4960897117f6602ca31512586fe7f3e9614f033532b6eaa33e5", size = 497742, upload-time = "2026-09-29T16:44:37.241Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a1/a5/e65fedac61c5b1c4e8fd08678c83f1ac239ab01e3efb6147047650741eb7/operonx-1.17.2.tar.gz", hash = "sha256:802d970c5c0d738d6d35b4a35e1eb37ba6a0cb5b71ba3320928bf2e26b78a7e9", size = 728150, upload-time = "2026-10-06T13:24:42.219Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/b3/3ec7c99a3c6612750a6b8f8d90431634ca381777888f6a188f8f20961d83/operonx-1.11.0-py3-none-any.whl", hash = "sha256:bbdeb9d2310f71b7755ffcb9d1b8f22de3540fa3472e2d3252b4f281718ed786", size = 632505, upload-time = "2026-09-29T16:44:35.483Z" },
+    { url = "https://files.pythonhosted.org/packages/d4/1c/a481e233a90cb914eaa4c4d6a503248e1bc1ef27b92fabf7eeff5d1c04d8/operonx-1.17.2-py3-none-any.whl", hash = "sha256:d22bd3c1e45598724ce5a22d668ec27ca16d39c791445e66a4d937e6fe0ec456", size = 900053, upload-time = "2026-10-06T13:24:40.496Z" },
 ]
 
 [package.optional-dependencies]

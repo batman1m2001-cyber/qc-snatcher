@@ -1,6 +1,6 @@
 """score — run the scoring graph over a folder of calls, one JSON out per call.
 
-    python main.py                     # the `main` runbook: preflight ▶ ingest ▶ this ▶ report
+    python main.py                     # the `main` job: preflight ▶ ingest ▶ this ▶ report
     operonx-run main --resume          # only the calls the last score run did not finish
 
 Configured by PIPELINE_INPUT_PATH (or PIPELINE_FILES_LIST, a file of paths,

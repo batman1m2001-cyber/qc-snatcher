@@ -9,7 +9,7 @@ built on the operonx graph framework (1.11).
 ## Tech Stack
 
 - **Python 3.12+** with **uv** for package management
-- **operonx 1.11** (PyPI) — graph engine (`@graph`, `@op`), Jobs/Runbooks, `Application`.
+- **operonx 1.17** (PyPI) — graph engine (`@graph`, `@op`), Jobs (`items`, `steps`), `Application`.
   Its guide ships in the package: `uv run python -m operonx.guide` lists the pages;
   read `04-gotchas.md` before changing a graph — every failure there raises nothing
 - **pytest + pytest-asyncio** — test suite
@@ -57,7 +57,7 @@ uv run operonx-run ingest                    # exit 1 when stale, naming the fix
 uv run operonx-run ingest --set seed=true
 uv run operonx-run create_schema
 
-# The deploy gate (MLE runs it once, before the pods): the selfcheck runbook, with MLE's secrets
+# The deploy gate (MLE runs it once, before the pods): the selfcheck job (steps), with MLE's secrets
 uv run python main.py --selfcheck
 
 # Rough tools — QC batches, the corpus workbook, the scan report: plain scripts
@@ -173,7 +173,7 @@ scripts that nothing in `src/` or `app/` imports.
 
 | Module | Purpose |
 |--------|---------|
-| `main.py`                  | MLE's command: the `main` runbook (`--ingest` → `seed=true`; exit 1 iff preflight or ingest fails), or `--selfcheck`, the deploy gate |
+| `main.py`                  | MLE's command: the `main` job (steps) (`--ingest` → `seed=true`; exit 1 iff preflight or ingest fails), or `--selfcheck`, the deploy gate |
 | `app/main.py`              | `APP = Application(...)`: the seven jobs, and the graph each runs — read first |
 | `app/settings.py`          | How a run executes: every run variable, read once into `Settings`, with its default — the table |
 | `app/_score.py`            | `build_job`: the score job from those settings; the progress line |
@@ -278,7 +278,7 @@ internals only through the harness — `tests/repo/test_tests_layout.py` holds b
 `python main.py --selfcheck` runs **once in the deploy pipeline, before**
 the pods start — its own flag, because the pods scale horizontally and
 would each rerun it. It imports MLE's `settings` (the secrets), then runs
-the `selfcheck` runbook: preflight ▶ ingest with seed (the fixture must
+the `selfcheck` job (steps): preflight ▶ ingest with seed (the fixture must
 not judge a corpus the store does not hold yet) ▶ `selfcheck_score`, an
 operonx `Eval`: the 90 fixture calls through the scoring graph, each
 compared with its recorded baseline row in `tests/sample/fixtures/`. Pass =

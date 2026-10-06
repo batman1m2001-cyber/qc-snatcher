@@ -19,7 +19,7 @@ Both run from the repo root with `sys.executable`; neither needs anything on
 
 ## `python main.py`
 
-Runs `preflight ▶ ingest ▶ score ▶ report` (the `main` runbook in `app/main.py`).
+Runs `preflight ▶ ingest ▶ score ▶ report` (the `main` job (steps) in `app/main.py`).
 
 | step | does | fails the run when |
 |---|---|---|

@@ -1,4 +1,4 @@
-"""Graphs of the `qc_eval` runbook — `score_agent`, what the `qc_eval_score`
+"""Graphs of the `qc_eval` job (steps) — `score_agent`, what the `qc_eval_score`
 eval runs per call, and `qc_eval_report`. Declared in `app/main.py`; usage in `README.md`."""
 from operonx.core import END, START, graph
 

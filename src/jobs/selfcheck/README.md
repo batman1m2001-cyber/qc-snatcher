@@ -6,10 +6,10 @@ And, when a change is meant to move them, make the new scores the baseline.
 ## selfcheck — the 90 fixture calls, each against its baseline row.
 
 ```
-    python main.py --selfcheck            # the deploy gate: MLE's secrets, then the runbook, then S3
-    operonx-run selfcheck                 # the runbook alone; LLM cost; exit 1 under the threshold
+    python main.py --selfcheck            # the deploy gate: MLE's secrets, then its steps, then S3
+    operonx-run selfcheck                 # the steps alone; LLM cost; exit 1 under the threshold
 
-A runbook (app/main.py): preflight ▶ ingest, seeding a stale store ▶
+A job of steps (app/main.py): preflight ▶ ingest, seeding a stale store ▶
 selfcheck_score, an operonx Eval:
 
     Fixtures ──▶ score_fixture ──▶ matches_baseline

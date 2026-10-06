@@ -21,24 +21,24 @@ from tests._paths import ROOT
 JOBS = ROOT / "src" / "jobs"
 FEATURES = sorted(p for p in JOBS.iterdir() if p.is_dir() and not p.name.startswith("_") and (p / "__init__.py").exists())
 ALL = {j.name: j for j in APP.jobs}
-PLAIN = [j for j in APP.jobs if hasattr(j, "source")]
+PLAIN = [j for j in APP.jobs if j.steps is None]
 
 
 def test_the_application_declares_every_job():
     assert list(ALL) == ["main", "selfcheck", "selfcheck_build", "ingest", "create_schema", "qc_eval", "qc_eval_report"]
 
 
-def test_the_runbooks_run_their_jobs_in_order():
-    assert [j.name for j in ALL["main"].jobs] == ["preflight", "ingest", "score", "report"]
-    assert [j.name for j in ALL["selfcheck"].jobs] == ["preflight", "ingest", "selfcheck_score"]
+def test_the_steps_jobs_run_their_jobs_in_order():
+    assert [j.name for j in ALL["main"].steps] == ["preflight", "ingest", "score", "report"]
+    assert [j.name for j in ALL["selfcheck"].steps] == ["preflight", "ingest", "selfcheck_score"]
 
 
 def test_main_scores_the_env_and_the_deploy_gate_seeds():
-    main_ingest = ALL["main"].jobs[1]
-    deploy_ingest = ALL["selfcheck"].jobs[1]
+    main_ingest = ALL["main"].steps[1]
+    deploy_ingest = ALL["selfcheck"].steps[1]
     assert main_ingest is ALL["ingest"] and main_ingest.inputs["seed"] is False
     assert deploy_ingest.inputs["seed"] is True
-    assert ALL["main"].jobs[2].on_error == "record"  # a failed call must not fail the runbook
+    assert ALL["main"].steps[2].items_fail_run is False  # a failed call must not stop the steps
 
 
 @pytest.mark.parametrize("job", PLAIN, ids=lambda j: j.name)

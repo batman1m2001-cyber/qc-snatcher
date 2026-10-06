@@ -12,5 +12,5 @@ order — each only means anything once the one before holds:
                 connection — constructing a client opens no socket
 
 Whether the corpus store is current is `ingest`'s question, the next step
-of the `main` runbook. Needs VPN. Costs nothing.
+of the `main` job's steps. Needs VPN. Costs nothing.
 """

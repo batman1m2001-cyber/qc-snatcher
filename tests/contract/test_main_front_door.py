@@ -1,6 +1,6 @@
 """`python main.py` is a contract with the deployment: `--ingest`,
 `--selfcheck`, the `PIPELINE_*` variables, the output files and the exit
-status. It delegates to the `main` and `selfcheck` runbooks; this pins that
+status. It delegates to the `main` and `selfcheck` jobs (steps); this pins that
 the contract survived the move.
 
 | contract | pinned by |
@@ -40,7 +40,7 @@ class FakeRun:
 
 @pytest.fixture
 def runbook(monkeypatch, tmp_path):
-    """The `main` runbook with each member's run replaced: records the order,
+    """The `main` job with each step's run replaced: records the order,
     the loop, and the inputs each job saw; *fail* names a job that fails."""
     monkeypatch.setattr(app_main.main, "record_dir", tmp_path)
     # operonx-run loads ./.env first; in a test that would leak into every test after it
@@ -52,7 +52,7 @@ def runbook(monkeypatch, tmp_path):
             job = getattr(app_main, name)
             monkeypatch.setattr(job, "inputs", dict(job.inputs))
 
-            async def run(resume=False, job=job):
+            async def run(resume=False, job=job, **_):
                 seen["ran"].append(job.name)
                 seen["loops"].append(asyncio.get_running_loop())
                 seen["inputs"][job.name] = dict(job.inputs)
@@ -151,14 +151,13 @@ class OneMissingCall:
     def paths(self):
         return ["gone"]
 
-    async def items(self):
+    async def __aiter__(self):
         yield {"path": "does/not/exist.json", "name": "gone", "metadata": {"call_code": "Hua_tra"}}
 
 
 def test_a_failed_call_is_recorded_gets_its_file_and_does_not_fail_the_run(tmp_path):
     job = build_job(output_path=tmp_path / "out", source=OneMissingCall(), record_dir=tmp_path / "runs",
                     on_item=lambda r: None)
-    assert app_main.score.on_error == "record"
     run = job.run_sync()
     assert run.status == "ok" and run.counts["failed"] == 1
     assert "error" in json.loads((tmp_path / "out" / "gone.json").read_text(encoding="utf-8"))
@@ -171,7 +170,7 @@ def test_a_files_list_names_the_calls(tmp_path):
     lst = tmp_path / "files.txt"
     lst.write_text("b.json\n# comment\n\na.json\n", encoding="utf-8")
     job = build_job(input_path=tmp_path / "ignored", files_list=lst)
-    assert [p.name for p in job.source.paths()] == ["a.json", "b.json"]
+    assert [p.name for p in job.items.paths()] == ["a.json", "b.json"]
 
 
 def test_progress_lines(capsys):
