@@ -1,4 +1,4 @@
-"""MLE's command: the `selfcheck` and `main` runbooks `app/main.py` declares.
+"""MLE's command: the `selfcheck` and `main` jobs (steps) `app/main.py` declares.
 
     python main.py --selfcheck  # the deploy gate, once: preflight ▶ ingest + seed ▶ selfcheck_score
     python main.py              # a pod: preflight ▶ ingest ▶ score ▶ report

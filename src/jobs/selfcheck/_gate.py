@@ -1,4 +1,4 @@
-"""What `python main.py --selfcheck` does after the runbook, pass or fail:
+"""What `python main.py --selfcheck` does after its steps, pass or fail:
 say the verdict, and send the run record to S3 so each deploy keeps its
 own evidence."""
 from __future__ import annotations
@@ -8,14 +8,14 @@ from pathlib import Path
 
 
 def verdict(record_dir: str = ".runs") -> str:
-    """One line from the last `selfcheck` runbook run: the match rate
-    against the threshold, or the step that stopped it before scoring."""
-    from operonx.app.jobs.runbook import last_run
+    """One line from the last `selfcheck` run (a job of steps): the match
+    rate against the threshold, or the step that stopped it before scoring."""
+    from operonx.app.jobs import last_run
 
     run = last_run(record_dir, "selfcheck")
     if run is None:
         return "selfcheck FAIL - no run recorded"
-    steps = json.loads((Path(run.path) / "run.json").read_text(encoding="utf-8"))["tree"]["children"]
+    steps = run.meta.get("steps") or []
     score = next((s for s in steps if s["name"] == "selfcheck_score" and s.get("path")), None)
     if score is None:
         stopped = next((s["name"] for s in steps if s["status"] != "ok"), "?")

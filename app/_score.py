@@ -48,37 +48,58 @@ def build_job(
     """The scoring job over *input_path* (or *files* / *files_list*) into
     *output_path*.
 
-    A failed call is recorded, not fatal (`on_error="record"`): it still
-    gets its file, `{"error": ...}`, so every input has an output a
-    downstream reader can check, and the batch — the `main` runbook — does
-    not fail over one call. The stage file goes to *tracer_local_dir*
+    A failed call is recorded, not fatal (`ScoreJob.items_fail_run` is
+    False): it still gets its file, `{"error": ...}`, so every input has an
+    output a downstream reader can check, and the batch — the `main` job's
+    steps — does not stop over one call. The stage file goes to *tracer_local_dir*
     whether or not op tracing is on — INCLUDE_TRACES alone decides it.
 
     *source* replaces the files (a test's calls). *on_item* defaults to one
     progress line per call.
     """
-    calls = source if source is not None else Calls(input_path, files, files_list)
+    outputs = Outputs(output_path, skip_existing=skip_if_exists, write_errors=True)
+    calls = source if source is not None else Calls(input_path, files, files_list, outputs=outputs)
     tracer = _tracer(tracer_kind, tracer_local_dir)
-    return Job(
+    return ScoreJob(
         "score",
         # Built here so its name is pinned: from a bare factory, operonx
         # names the root after a variable inside its own job.py (`params`),
         # and every op in the trace carries that prefix.
         graph=score_call(item=PARENT, trace_root=PARENT, session_id=PARENT, name="score_call"),
-        source=calls,
-        sink=Outputs(output_path, skip_existing=skip_if_exists, write_errors=True),
+        items=calls,
+        output=outputs.write,
         key="name",
-        item_input="item",
+        input="item",
         concurrency=max_concurrency,
-        on_error="record",
         # `[]`, not None: inside an Application a job with no consumers
         # gets operonx's plain LocalConsumer — every transcript, unredacted.
         trace=[tracer] if tracer else [],
         inputs={"trace_root": str(tracer_local_dir), "session_id": uuid.uuid4().hex},
-        on_item=on_item if on_item is not None else Progress(calls),
+        on_item=WriteFailures(outputs, on_item if on_item is not None else Progress(calls)),
         record_dir=record_dir,
         description="Score a folder of calls; one JSON out per call.",
     )
+
+
+class ScoreJob(Job):
+    """The score job: a failed call is in the record and has its error file,
+    but does not fail the run — the batch goes on to `report`."""
+
+    items_fail_run = False
+
+
+class WriteFailures:
+    """`on_item`: a failed or timed-out call's `{"error": ...}` file, then
+    *then* (the progress line)."""
+
+    def __init__(self, outputs: Outputs, then: Callable[[Any], Any]):
+        self.outputs = outputs
+        self.then = then
+
+    def __call__(self, result: Any) -> Any:
+        if result.status in ("failed", "timeout"):
+            self.outputs.fail(result.key, result.error or result.status)
+        return self.then(result)
 
 
 class Progress:

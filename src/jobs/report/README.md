@@ -1,7 +1,7 @@
 # report — how the batch went: calls scored, failed, skipped; LLM tokens and cost.
 
 ```
-    python main.py                      # the `main` runbook's last step
+    python main.py                      # the `main` job (steps)'s last step
     operonx-run main                    # the same
 
 Reads the last `score` run's record (`.runs/score/<run>/`) and prints the

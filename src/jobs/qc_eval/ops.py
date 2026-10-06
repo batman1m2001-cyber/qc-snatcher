@@ -1,4 +1,4 @@
-"""What the `qc_eval` runbook is made of.
+"""What the `qc_eval` job's steps are made of.
 
     qc_eval_score    QCBatch (the labelled calls) ──▶ score_agent (graph.py) ──▶ agrees_with_qc
     qc_eval_report   the last qc_eval_score run ──▶ data/qc/<batch>/runs/<run id>/

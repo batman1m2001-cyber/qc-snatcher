@@ -16,7 +16,7 @@ SCORE_JOB = "score"
 def summary(run: Any, total: int, output_path: "str | Path") -> str:
     """The end-of-batch summary: counts from the score run's record, LLM
     usage from the process-wide counter `src.core._bootstrap` keeps (the
-    runbook ran score in this process). *total* is every input file; the
+    `main` job ran score in this process). *total* is every input file; the
     ones the record never saw had no call_code and were skipped at the source."""
     c = run.counts
     unread = max(0, total - len(run.items))
