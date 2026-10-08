@@ -8,7 +8,7 @@ dependencies = [
     # Three hush packages collapse into one. `pgvector` and `triton` are
     # the only retrieval backends this pipeline runs — faiss and onnx were
     # the local-stack path and go with them.
-    "operonx[openai,pgvector,triton]>=1.17.1",
+    "operonx[openai,pgvector,triton]>=1.17.5",
     "openpyxl>=3.1.5",
     "python-dotenv>=1.2.1",
 ]
