@@ -1,3 +1,16 @@
+---
+title: Retriever refactor, hush ops with swappable local and pgvector backends
+status: in_progress
+phases:
+  - {id: R1, title: Retriever rebuilt on ops (faiss + yaml), status: done}
+  - {id: R2, title: Triton embedding backend, status: done}
+  - {id: R3, title: Schema and backfill, status: done}
+  - {id: R4, title: Flip resources to pgvector and postgres, status: open}
+  - {id: R5, title: Entry-counting top-K (optional), status: open}
+rows: [QCS-REQ-SENT-05, QCS-REQ-CORPUS-02]
+updated: 2026-08-25
+---
+
 # Retriever refactor — hush.ai ops + swappable local ↔ pgvector
 
 ## Executive summary
