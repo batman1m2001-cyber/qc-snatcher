@@ -1,0 +1,12 @@
+# How this project is built: acceptance tests before the code.
+
+[tdd]
+mode = "acceptance"
+
+[done]
+# The repo's own test command (.gitlab-ci.yml). Left out by name: tests that need the
+# fixture calls, recorded snapshot and baseline, which are not in this checkout
+# (code-only import, data not in the repo).
+checks = [
+  { name = "tests", cmd = "uv run python -m pytest tests -q -p no:cacheprovider --ignore=tests/graphs/test_snapshot.py --ignore=tests/graphs/test_qc_eval.py --ignore=tests/graphs/test_selfcheck.py --deselect tests/repo/test_corpus_hash.py::test_recorded_baseline_uses_the_same_hash --deselect tests/unit/test_selfcheck_smoke.py::TestFixtureLayout --deselect tests/graphs/test_operonx_110.py::test_a_traced_call_lands_in_one_folder_under_the_root --deselect tests/graphs/test_replay_equivalence.py::TestTheRecordingIsUsable::test_there_are_fixtures_to_replay" },
+]

@@ -1,3 +1,17 @@
+---
+title: Sentiment on operonx 1.10's flow
+status: in_progress
+phases:
+  - {id: P1, title: operonx 1.10 in place, status: done}
+  - {id: P2, title: Gotcha fixes, status: done}
+  - {id: P3, title: src/ layering, status: done}
+  - {id: P4, title: Application, status: done}
+  - {id: P5, title: smoke job and docs, status: done}
+  - {id: P6, title: The run on the VPN, status: open}
+rows: []
+updated: 2026-09-28
+---
+
 # Plan — sentiment on operonx 1.10's flow
 
 **Status:** phases 1–5 built, 2026-09-28, branch `refactor/operonx-1.10` (not pushed).
